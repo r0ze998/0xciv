@@ -8,7 +8,7 @@ sierra-replace-ids = true
 
 [scripts]
 migrate = "sozo build && sozo migrate"
-start = "sozo execute dojo_starter-actions start_game -c 20 --wait"
+create = "sozo execute dojo_starter-actions create_game --wait"
 spawn = "sozo execute dojo_starter-actions spawn_civilization --wait"
 
 [dependencies]

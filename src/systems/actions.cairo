@@ -1,14 +1,14 @@
-use dojo_starter::models::{ResourceType, AgentAction, GamePhase};
+use dojo_starter::models::ResourceType;
 
 #[starknet::interface]
 pub trait IActions<T> {
     // Game management
-    fn start_game(ref self: T, total_turns: u32);
+    fn create_game(ref self: T);
     fn advance_turn(ref self: T);
 
     // Player actions
     fn spawn_civilization(ref self: T);
-    fn set_strategy(ref self: T, aggression: u8, trade_focus: u8, growth_focus: u8);
+    fn set_strategy(ref self: T, prompt_hash: felt252);
 
     // Agent actions (called by Daydreams agents or players)
     fn gather(ref self: T);
@@ -23,6 +23,7 @@ pub trait IActions<T> {
     fn accept_trade(ref self: T, trade_id: u32);
     fn attack(ref self: T, target_civ: u32);
     fn defend(ref self: T);
+    fn check_elimination(ref self: T, civ_id: u32);
 }
 
 #[dojo::contract]
@@ -38,6 +39,9 @@ pub mod actions {
 
     // === Constants ===
     const GAME_ID: u32 = 1;
+    const GRID_SIZE: u32 = 5;
+    const MAX_PLAYERS: u32 = 4;
+    const STARTING_HP: u128 = 100;
     const STARTING_FOOD: u128 = 100;
     const STARTING_METAL: u128 = 50;
     const STARTING_KNOWLEDGE: u128 = 25;
@@ -45,6 +49,9 @@ pub mod actions {
     const BASE_GATHER_RATE: u128 = 10;
     const TERRITORY_BONUS: u128 = 5;
     const DEFEND_BONUS: u128 = 5;
+    const ATTACK_HP_DAMAGE: u128 = 20;
+    const FAILED_ATTACK_HP_DAMAGE: u128 = 10;
+    const ATTACK_METAL_COST: u128 = 10;
 
     // === Events ===
 
@@ -72,8 +79,7 @@ pub mod actions {
         pub attacker_civ: u32,
         pub defender_civ: u32,
         pub attacker_won: bool,
-        pub territory_x: u32,
-        pub territory_y: u32,
+        pub hp_damage: u128,
     }
 
     #[derive(Copy, Drop, Serde)]
@@ -95,6 +101,14 @@ pub mod actions {
 
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
+    pub struct CivEliminated {
+        #[key]
+        pub civ_id: u32,
+        pub reason: felt252,
+    }
+
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
     pub struct GameEnded {
         #[key]
         pub game_id: u32,
@@ -105,52 +119,43 @@ pub mod actions {
 
     #[abi(embed_v0)]
     impl ActionsImpl of IActions<ContractState> {
-        fn start_game(ref self: ContractState, total_turns: u32) {
+        fn create_game(ref self: ContractState) {
             let mut world = self.world_default();
             let game: GameState = world.read_model(GAME_ID);
-            assert(game.game_phase == GamePhase::Setup, 'game already started');
+            assert(game.game_phase == GamePhase::Setup, 'game already exists');
+            assert(game.civ_count == 0, 'game already initialized');
+
+            // Initialize 5x5 grid with resource types
+            let mut x: u32 = 0;
+            while x < GRID_SIZE {
+                let mut y: u32 = 0;
+                while y < GRID_SIZE {
+                    let res_index = (x + y) % 3;
+                    let resource = if res_index == 0 {
+                        ResourceType::Food
+                    } else if res_index == 1 {
+                        ResourceType::Metal
+                    } else {
+                        ResourceType::Knowledge
+                    };
+                    let territory = Territory {
+                        x, y, owner_civ_id: 0, resource_type: resource,
+                    };
+                    world.write_model(@territory);
+                    y += 1;
+                };
+                x += 1;
+            };
 
             let new_game = GameState {
                 game_id: GAME_ID,
-                turn_number: 1,
-                total_turns,
-                game_phase: GamePhase::Running,
-                civ_count: game.civ_count,
-                next_trade_id: game.next_trade_id,
+                turn_number: 0,
+                game_phase: GamePhase::Setup,
+                civ_count: 0,
+                alive_count: 0,
+                next_trade_id: 0,
             };
             world.write_model(@new_game);
-        }
-
-        fn advance_turn(ref self: ContractState) {
-            let mut world = self.world_default();
-            let mut game: GameState = world.read_model(GAME_ID);
-            assert(game.game_phase == GamePhase::Running, 'game not running');
-
-            // Expire all active trades from the previous turn
-            let mut i: u32 = 0;
-            while i < game.next_trade_id {
-                let trade: TradeProposal = world.read_model(i);
-                if trade.is_active {
-                    let expired = TradeProposal { is_active: false, ..trade };
-                    world.write_model(@expired);
-                }
-                i += 1;
-            };
-
-            game.turn_number += 1;
-
-            if game.turn_number > game.total_turns {
-                game.game_phase = GamePhase::Ended;
-                let winner_id = find_winner(@world, game.civ_count);
-                world.write_model(@game);
-                world.emit_event(@GameEnded { game_id: GAME_ID, winner_civ_id: winner_id });
-            } else {
-                world.write_model(@game);
-                world
-                    .emit_event(
-                        @TurnAdvanced { game_id: GAME_ID, turn_number: game.turn_number },
-                    );
-            }
         }
 
         fn spawn_civilization(ref self: ContractState) {
@@ -162,12 +167,34 @@ pub mod actions {
             assert(existing.civ_id == 0, 'already spawned');
 
             let mut game: GameState = world.read_model(GAME_ID);
+            assert(game.game_phase != GamePhase::Ended, 'game has ended');
+            assert(game.civ_count < MAX_PLAYERS, 'game is full');
+
             game.civ_count += 1;
+            game.alive_count += 1;
             let civ_id = game.civ_count;
+
+            // Auto-start game when 2+ players have joined
+            if game.civ_count >= 2 && game.game_phase == GamePhase::Setup {
+                game.game_phase = GamePhase::Running;
+                game.turn_number = 1;
+            }
+
+            // Assign corner positions on 5x5 grid
+            let (start_x, start_y) = if civ_id == 1 {
+                (0_u32, 0_u32)
+            } else if civ_id == 2 {
+                (4_u32, 0_u32)
+            } else if civ_id == 3 {
+                (0_u32, 4_u32)
+            } else {
+                (4_u32, 4_u32)
+            };
 
             let civ = Civilization {
                 civ_id,
                 owner: caller,
+                hp: STARTING_HP,
                 food: STARTING_FOOD,
                 metal: STARTING_METAL,
                 knowledge: STARTING_KNOWLEDGE,
@@ -177,20 +204,11 @@ pub mod actions {
                 is_alive: true,
             };
 
-            let strategy = Strategy { civ_id, aggression: 33, trade_focus: 33, growth_focus: 34 };
+            let strategy = Strategy { civ_id, prompt_hash: 0 };
 
-            // Assign starting territory based on civ_id
-            let start_x = civ_id * 3;
-            let start_y = civ_id * 3;
-            let resource = match civ_id % 3 {
-                0 => ResourceType::Knowledge,
-                1 => ResourceType::Food,
-                2 => ResourceType::Metal,
-                _ => ResourceType::Food,
-            };
-            let territory = Territory {
-                x: start_x, y: start_y, owner_civ_id: civ_id, resource_type: resource,
-            };
+            // Claim starting territory
+            let mut territory: Territory = world.read_model((start_x, start_y));
+            territory.owner_civ_id = civ_id;
 
             let player_civ = PlayerCiv { owner: caller, civ_id };
 
@@ -203,9 +221,7 @@ pub mod actions {
             world.emit_event(@CivSpawned { civ_id, owner: caller });
         }
 
-        fn set_strategy(
-            ref self: ContractState, aggression: u8, trade_focus: u8, growth_focus: u8,
-        ) {
+        fn set_strategy(ref self: ContractState, prompt_hash: felt252) {
             let mut world = self.world_default();
             let caller = get_caller_address();
             let player_civ: PlayerCiv = world.read_model(caller);
@@ -215,9 +231,7 @@ pub mod actions {
             assert(civ.owner == caller, 'not your civ');
             assert(civ.is_alive, 'civ is dead');
 
-            let strategy = Strategy {
-                civ_id: player_civ.civ_id, aggression, trade_focus, growth_focus,
-            };
+            let strategy = Strategy { civ_id: player_civ.civ_id, prompt_hash };
             world.write_model(@strategy);
         }
 
@@ -353,17 +367,17 @@ pub mod actions {
             assert(attacker.military_strength > 0, 'no military');
 
             // Attack costs metal
-            let attack_cost: u128 = 10;
-            assert(attacker.metal >= attack_cost, 'not enough metal');
-            attacker.metal -= attack_cost;
+            assert(attacker.metal >= ATTACK_METAL_COST, 'not enough metal');
+            attacker.metal -= ATTACK_METAL_COST;
 
-            // Defender gets bonus if last action was Defend
-            let defender_bonus: u128 = if defender.last_action == AgentAction::Defend {
+            // Defender gets bonus if last action was Defend + knowledge defense bonus
+            let defend_action_bonus: u128 = if defender.last_action == AgentAction::Defend {
                 DEFEND_BONUS
             } else {
                 0
             };
-            let def_strength = defender.military_strength + defender_bonus;
+            let knowledge_defense = defender.knowledge / 10;
+            let def_strength = defender.military_strength + defend_action_bonus + knowledge_defense;
 
             // Pseudo-random from turn + civ ids
             let seed: u128 = game.turn_number.into()
@@ -377,13 +391,22 @@ pub mod actions {
             let attacker_power = attacker.military_strength + random_factor;
             let attacker_won = attacker_power > def_strength;
 
+            let mut hp_damage: u128 = 0;
+
             if attacker_won {
-                // Transfer a territory
+                // Damage defender HP
+                hp_damage = ATTACK_HP_DAMAGE;
+                if defender.hp > hp_damage {
+                    defender.hp -= hp_damage;
+                } else {
+                    defender.hp = 0;
+                }
+
+                // Transfer a territory if defender has one
                 if defender.territory_count > 0 {
-                    let stolen_x = target_civ * 3;
-                    let stolen_y = target_civ * 3 + (defender.territory_count - 1);
-                    let mut terr: Territory = world.read_model((stolen_x, stolen_y));
-                    if terr.owner_civ_id == target_civ {
+                    let (found, tx, ty) = find_territory_owned_by(@world, target_civ);
+                    if found {
+                        let mut terr: Territory = world.read_model((tx, ty));
                         terr.owner_civ_id = player_civ.civ_id;
                         world.write_model(@terr);
                         attacker.territory_count += 1;
@@ -405,12 +428,15 @@ pub mod actions {
                 } else {
                     defender.military_strength = 0;
                 }
-
-                if defender.territory_count == 0 {
-                    defender.is_alive = false;
-                }
             } else {
-                // Failed attack
+                // Failed attack — attacker takes HP damage
+                hp_damage = FAILED_ATTACK_HP_DAMAGE;
+                if attacker.hp > hp_damage {
+                    attacker.hp -= hp_damage;
+                } else {
+                    attacker.hp = 0;
+                }
+
                 if attacker.military_strength >= 2 {
                     attacker.military_strength -= 2;
                 } else {
@@ -430,8 +456,7 @@ pub mod actions {
                         attacker_civ: player_civ.civ_id,
                         defender_civ: target_civ,
                         attacker_won,
-                        territory_x: target_civ * 3,
-                        territory_y: target_civ * 3,
+                        hp_damage,
                     },
                 );
 
@@ -461,6 +486,15 @@ pub mod actions {
                 civ.metal -= build_amount;
             }
             civ.military_strength += build_amount;
+
+            // Defending also recovers some HP (up to max 100)
+            if civ.hp < 100 {
+                civ.hp += 5;
+                if civ.hp > 100 {
+                    civ.hp = 100;
+                }
+            }
+
             civ.last_action = AgentAction::Defend;
 
             world.write_model(@civ);
@@ -471,6 +505,104 @@ pub mod actions {
                         civ_id: civ.civ_id, turn: game.turn_number, action: AgentAction::Defend,
                     },
                 );
+        }
+
+        fn check_elimination(ref self: ContractState, civ_id: u32) {
+            let mut world = self.world_default();
+            let mut civ: Civilization = world.read_model(civ_id);
+
+            if !civ.is_alive {
+                return;
+            }
+
+            let mut reason: felt252 = 0;
+            if civ.hp == 0 {
+                reason = 'hp_zero';
+            } else if civ.food == 0 {
+                reason = 'starvation';
+            } else if civ.territory_count == 0 {
+                reason = 'no_territory';
+            }
+
+            if reason != 0 {
+                civ.is_alive = false;
+                world.write_model(@civ);
+
+                let mut game: GameState = world.read_model(GAME_ID);
+                if game.alive_count > 0 {
+                    game.alive_count -= 1;
+                }
+                world.write_model(@game);
+
+                world.emit_event(@CivEliminated { civ_id, reason });
+
+                // Check if game should end (1 or fewer alive)
+                if game.alive_count <= 1 && game.civ_count > 1 {
+                    let mut g: GameState = world.read_model(GAME_ID);
+                    g.game_phase = GamePhase::Ended;
+                    let winner_id = find_last_alive(@world, g.civ_count);
+                    world.write_model(@g);
+                    world.emit_event(@GameEnded { game_id: GAME_ID, winner_civ_id: winner_id });
+                }
+            }
+        }
+
+        fn advance_turn(ref self: ContractState) {
+            let mut world = self.world_default();
+            let mut game: GameState = world.read_model(GAME_ID);
+            assert(game.game_phase == GamePhase::Running, 'game not running');
+
+            // Expire all active trades from the previous turn
+            let mut i: u32 = 0;
+            while i < game.next_trade_id {
+                let trade: TradeProposal = world.read_model(i);
+                if trade.is_active {
+                    let expired = TradeProposal { is_active: false, ..trade };
+                    world.write_model(@expired);
+                }
+                i += 1;
+            };
+
+            // Check elimination for all civs
+            let mut j: u32 = 1;
+            while j <= game.civ_count {
+                let mut civ: Civilization = world.read_model(j);
+                if civ.is_alive {
+                    let mut reason: felt252 = 0;
+                    if civ.hp == 0 {
+                        reason = 'hp_zero';
+                    } else if civ.food == 0 {
+                        reason = 'starvation';
+                    } else if civ.territory_count == 0 {
+                        reason = 'no_territory';
+                    }
+                    if reason != 0 {
+                        civ.is_alive = false;
+                        world.write_model(@civ);
+                        if game.alive_count > 0 {
+                            game.alive_count -= 1;
+                        }
+                        world.emit_event(@CivEliminated { civ_id: j, reason });
+                    }
+                }
+                j += 1;
+            };
+
+            game.turn_number += 1;
+
+            // Check if only 1 alive — last civilization standing wins
+            if game.alive_count <= 1 && game.civ_count > 1 {
+                game.game_phase = GamePhase::Ended;
+                let winner_id = find_last_alive(@world, game.civ_count);
+                world.write_model(@game);
+                world.emit_event(@GameEnded { game_id: GAME_ID, winner_civ_id: winner_id });
+            } else {
+                world.write_model(@game);
+                world
+                    .emit_event(
+                        @TurnAdvanced { game_id: GAME_ID, turn_number: game.turn_number },
+                    );
+            }
         }
     }
 
@@ -518,25 +650,43 @@ pub mod actions {
         }
     }
 
-    fn find_winner(world: @dojo::world::WorldStorage, civ_count: u32) -> u32 {
-        let mut best_id: u32 = 0;
-        let mut best_score: u128 = 0;
+    fn find_last_alive(world: @dojo::world::WorldStorage, civ_count: u32) -> u32 {
+        let mut result: u32 = 0;
         let mut i: u32 = 1;
         while i <= civ_count {
-            let civ: Civilization = world.read_model(i);
-            if civ.is_alive {
-                let score = civ.food
-                    + civ.metal
-                    + civ.knowledge
-                    + (civ.territory_count.into() * 50)
-                    + civ.military_strength;
-                if score > best_score {
-                    best_score = score;
-                    best_id = i;
+            if result == 0 {
+                let civ: Civilization = world.read_model(i);
+                if civ.is_alive {
+                    result = i;
                 }
             }
             i += 1;
         };
-        best_id
+        result
+    }
+
+    fn find_territory_owned_by(
+        world: @dojo::world::WorldStorage, civ_id: u32,
+    ) -> (bool, u32, u32) {
+        let mut result_x: u32 = 0;
+        let mut result_y: u32 = 0;
+        let mut found: bool = false;
+        let mut x: u32 = 0;
+        while x < GRID_SIZE {
+            let mut y: u32 = 0;
+            while y < GRID_SIZE {
+                if !found {
+                    let terr: Territory = world.read_model((x, y));
+                    if terr.owner_civ_id == civ_id {
+                        found = true;
+                        result_x = x;
+                        result_y = y;
+                    }
+                }
+                y += 1;
+            };
+            x += 1;
+        };
+        (found, result_x, result_y)
     }
 }
