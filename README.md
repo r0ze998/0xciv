@@ -1,76 +1,110 @@
-![Dojo Starter](./assets/cover.png)
+# 0xCIV — Your Words Shape Civilizations
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset=".github/mark-dark.svg">
-  <img alt="Dojo logo" align="right" width="120" src=".github/mark-light.svg">
-</picture>
+> AI agent civilization strategy game on Starknet. Command your civilization with natural language prompts.
 
-<a href="https://x.com/ohayo_dojo">
-<img src="https://img.shields.io/twitter/follow/dojostarknet?style=social"/>
-</a>
-<a href="https://github.com/dojoengine/dojo/stargazers">
-<img src="https://img.shields.io/github/stars/dojoengine/dojo?style=social"/>
-</a>
+**Dojo Game Jam VIII** | March 6-8, 2026 | Theme: *"Stop fighting bots — design around them"*
 
-[![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.com/invite/dojoengine)
-[![Telegram Chat][tg-badge]][tg-url]
+## 🎮 What is 0xCIV?
 
-[tg-badge]: https://img.shields.io/endpoint?color=neon&logo=telegram&label=chat&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fdojoengine
-[tg-url]: https://t.me/dojoengine
+0xCIV is a **prompt strategy game** where players write natural language instructions to command AI agent civilizations. Your words determine how your civilization gathers resources, trades, attacks, and defends.
 
-# Dojo Starter: Official Guide
+Same game state + different prompt = different outcome. **The game IS prompt engineering.**
 
-A quickstart guide to help you build and deploy your first Dojo provable game.
+## 🕹️ How to Play
 
-Read the full tutorial [here](https://dojoengine.org/tutorial/dojo-starter).
+1. **Create** a civilization on the 5×5 grid map (up to 4 players)
+2. **Write** a strategy prompt in natural language
+   - *"Prioritize knowledge. If attacked, retaliate with full force. Keep food above 50 at all costs."*
+   - *"Attack the weakest neighbor every turn. Expand territory aggressively."*
+   - *"Defend and trade only. Never attack first."*
+3. **Advance** the turn — your AI agent (Daydreams) reads the game state and executes actions based on your prompt
+4. **Watch** the results, edit your prompt anytime
+5. **Survive** — last civilization standing wins
 
-## Running Locally
+## ☠️ Elimination Conditions
 
-#### Terminal one (Make sure this is running)
+Your civilization is eliminated if **any** of these happen:
+- **HP reaches 0**
+- **All territories lost**
+- **Food reaches 0** (starvation)
+
+## 📦 Resources
+
+| Resource | Purpose | Fatal if 0? |
+|----------|---------|:-----------:|
+| 🍞 Food | Sustains population | ☠️ YES |
+| ⚒️ Metal | Military & building | No |
+| 📚 Knowledge | Trade rates & defense bonus | No |
+
+## 🏗️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| On-chain | **Dojo Engine** (Cairo) on Starknet |
+| AI Agent | **Daydreams** Framework |
+| Indexer | **Torii** (GraphQL) |
+| Devnet | **Katana** |
+| Frontend | React + @dojoengine/sdk + Tailwind CSS |
+
+## 🔧 Build & Run
+
+### Prerequisites
+
+- [Dojo](https://book.dojoengine.org/) (sozo, katana, torii)
+- Node.js 18+
+
+### Contracts
 
 ```bash
-# Run Katana
-katana --dev --dev.no-fee
-```
-
-#### Terminal two
-
-```bash
-# Build the example
+# Build
 sozo build
 
-# Inspect the world
-sozo inspect
+# Run tests
+sozo test
 
-# Migrate the example
+# Start local devnet
+katana --disable-fee --allowed-origins "*"
+
+# Deploy
 sozo migrate
 
-# Start Torii
-# Replace <WORLD_ADDRESS> with the address of the deployed world from the previous step
-torii --world <WORLD_ADDRESS> --http.cors_origins "*"
+# Start indexer
+torii --world <WORLD_ADDRESS> --allowed-origins "*"
 ```
 
-## Docker
-You can start stack using docker compose. [Here are the installation instruction](https://docs.docker.com/engine/install/)
+## 🏛️ Architecture
 
-```bash
-docker compose up
 ```
-You'll get all services logs in the same terminal instance. Whenever you want to stop just ctrl+c
+┌──────────────┐
+│   Frontend   │ ← Player writes prompts, views map
+│   (React)    │
+└──────┬───────┘
+       │ GraphQL
+┌──────┴───────┐
+│    Torii     │ ← Indexes on-chain state
+└──────┬───────┘
+       │
+┌──────┴───────┐     ┌──────────────┐
+│   Katana     │ ←── │  Daydreams   │
+│  (Starknet)  │     │  (AI Agent)  │
+│              │     │              │
+│  Models:     │     │ Reads state  │
+│  Civilization│     │ via Torii    │
+│  Territory   │     │ Decides next │
+│  GameState   │     │ action from  │
+│  Trade       │     │ player prompt│
+└──────────────┘     └──────────────┘
+```
 
----
+## 📄 Game Design
 
-## Contribution
+See [GAME_DESIGN_v2.md](./GAME_DESIGN_v2.md) for the full specification.
 
-1. **Report a Bug**
+## 👥 Team
 
-    - If you think you have encountered a bug, and we should know about it, feel free to report it [here](https://github.com/dojoengine/dojo-starter/issues) and we will take care of it.
+- **r0ze** ([@r0ze_____](https://x.com/r0ze_____)) — Game Design & Direction
+- **neo** — AI Engineering & Development
 
-2. **Request a Feature**
+## 📜 License
 
-    - You can also request for a feature [here](https://github.com/dojoengine/dojo-starter/issues), and if it's viable, it will be picked for development.
-
-3. **Create a Pull Request**
-    - It can't get better then this, your pull request will be appreciated by the community.
-
-Happy coding!
+MIT
