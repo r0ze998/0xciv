@@ -1,101 +1,133 @@
 use starknet::ContractAddress;
 
-#[derive(Copy, Drop, Serde, Debug)]
-#[dojo::model]
-pub struct Moves {
-    #[key]
-    pub player: ContractAddress,
-    pub remaining: u8,
-    pub last_direction: Option<Direction>,
-    pub can_move: bool,
-}
+// === Enums ===
 
-#[derive(Drop, Serde, Debug)]
-#[dojo::model]
-pub struct DirectionsAvailable {
-    #[key]
-    pub player: ContractAddress,
-    pub directions: Array<Direction>,
-}
-
-#[derive(Copy, Drop, Serde, Debug)]
-#[dojo::model]
-pub struct Position {
-    #[key]
-    pub player: ContractAddress,
-    pub vec: Vec2,
-}
-
-#[derive(Copy, Drop, Serde, Debug)]
-#[dojo::model]
-pub struct PositionCount {
-    #[key]
-    pub identity: ContractAddress,
-    pub position: Span<(u8, u128)>,
+#[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, DojoStore, Default)]
+pub enum ResourceType {
+    #[default]
+    Food,
+    Metal,
+    Knowledge,
 }
 
 #[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, DojoStore, Default)]
-pub enum Direction {
+pub enum AgentAction {
     #[default]
-    Left,
-    Right,
-    Up,
-    Down,
+    Gather,
+    Trade,
+    Attack,
+    Defend,
 }
 
-#[derive(Copy, Drop, Serde, IntrospectPacked, Debug, DojoStore)]
-pub struct Vec2 {
+#[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, DojoStore, Default)]
+pub enum GamePhase {
+    #[default]
+    Setup,
+    Running,
+    Ended,
+}
+
+// === Models ===
+
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct Civilization {
+    #[key]
+    pub civ_id: u32,
+    pub owner: ContractAddress,
+    pub hp: u128,
+    pub food: u128,
+    pub metal: u128,
+    pub knowledge: u128,
+    pub territory_count: u32,
+    pub military_strength: u128,
+    pub last_action: AgentAction,
+    pub is_alive: bool,
+}
+
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct Strategy {
+    #[key]
+    pub civ_id: u32,
+    pub prompt_hash: felt252,
+}
+
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct Territory {
+    #[key]
     pub x: u32,
+    #[key]
     pub y: u32,
+    pub owner_civ_id: u32,
+    pub resource_type: ResourceType,
 }
 
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct TradeProposal {
+    #[key]
+    pub trade_id: u32,
+    pub from_civ: u32,
+    pub to_civ: u32,
+    pub offer_type: ResourceType,
+    pub offer_amount: u128,
+    pub request_type: ResourceType,
+    pub request_amount: u128,
+    pub is_active: bool,
+}
 
-impl DirectionIntoFelt252 of Into<Direction, felt252> {
-    fn into(self: Direction) -> felt252 {
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct GameState {
+    #[key]
+    pub game_id: u32,
+    pub turn_number: u32,
+    pub game_phase: GamePhase,
+    pub civ_count: u32,
+    pub alive_count: u32,
+    pub next_trade_id: u32,
+}
+
+// Lookup: maps owner address to civ_id
+#[derive(Copy, Drop, Serde, Debug)]
+#[dojo::model]
+pub struct PlayerCiv {
+    #[key]
+    pub owner: ContractAddress,
+    pub civ_id: u32,
+}
+
+// === Into impls ===
+
+impl ResourceTypeIntoFelt252 of Into<ResourceType, felt252> {
+    fn into(self: ResourceType) -> felt252 {
         match self {
-            Direction::Left => 1,
-            Direction::Right => 2,
-            Direction::Up => 3,
-            Direction::Down => 4,
+            ResourceType::Food => 0,
+            ResourceType::Metal => 1,
+            ResourceType::Knowledge => 2,
         }
     }
 }
 
-impl OptionDirectionIntoFelt252 of Into<Option<Direction>, felt252> {
-    fn into(self: Option<Direction>) -> felt252 {
+impl AgentActionIntoFelt252 of Into<AgentAction, felt252> {
+    fn into(self: AgentAction) -> felt252 {
         match self {
-            Option::None => 0,
-            Option::Some(d) => d.into(),
+            AgentAction::Gather => 0,
+            AgentAction::Trade => 1,
+            AgentAction::Attack => 2,
+            AgentAction::Defend => 3,
         }
     }
 }
 
-#[generate_trait]
-impl Vec2Impl of Vec2Trait {
-    fn is_zero(self: Vec2) -> bool {
-        if self.x - self.y == 0 {
-            return true;
+impl GamePhaseIntoFelt252 of Into<GamePhase, felt252> {
+    fn into(self: GamePhase) -> felt252 {
+        match self {
+            GamePhase::Setup => 0,
+            GamePhase::Running => 1,
+            GamePhase::Ended => 2,
         }
-        false
-    }
-
-    fn is_equal(self: Vec2, b: Vec2) -> bool {
-        self.x == b.x && self.y == b.y
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Vec2, Vec2Trait};
-
-    #[test]
-    fn test_vec_is_zero() {
-        assert(Vec2Trait::is_zero(Vec2 { x: 0, y: 0 }), 'not zero');
-    }
-
-    #[test]
-    fn test_vec_is_equal() {
-        let position = Vec2 { x: 420, y: 0 };
-        assert(position.is_equal(Vec2 { x: 420, y: 0 }), 'not equal');
     }
 }

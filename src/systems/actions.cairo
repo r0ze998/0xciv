@@ -1,118 +1,542 @@
-use dojo_starter::models::{Direction, Position};
+use dojo_starter::models::{ResourceType, AgentAction, GamePhase};
 
-// define the interface
 #[starknet::interface]
 pub trait IActions<T> {
-    fn spawn(ref self: T);
-    fn move(ref self: T, direction: Direction);
+    // Game management
+    fn start_game(ref self: T, total_turns: u32);
+    fn advance_turn(ref self: T);
+
+    // Player actions
+    fn spawn_civilization(ref self: T);
+    fn set_strategy(ref self: T, aggression: u8, trade_focus: u8, growth_focus: u8);
+
+    // Agent actions (called by Daydreams agents or players)
+    fn gather(ref self: T);
+    fn propose_trade(
+        ref self: T,
+        to_civ: u32,
+        offer_type: ResourceType,
+        offer_amount: u128,
+        request_type: ResourceType,
+        request_amount: u128,
+    );
+    fn accept_trade(ref self: T, trade_id: u32);
+    fn attack(ref self: T, target_civ: u32);
+    fn defend(ref self: T);
 }
 
-// dojo decorator
 #[dojo::contract]
 pub mod actions {
     use dojo::event::EventStorage;
     use dojo::model::ModelStorage;
-    use dojo_starter::models::{Moves, Vec2};
+    use dojo_starter::models::{
+        AgentAction, Civilization, GamePhase, GameState, PlayerCiv, ResourceType, Strategy,
+        Territory, TradeProposal,
+    };
     use starknet::{ContractAddress, get_caller_address};
-    use super::{Direction, IActions, Position, next_position};
+    use super::IActions;
+
+    // === Constants ===
+    const GAME_ID: u32 = 1;
+    const STARTING_FOOD: u128 = 100;
+    const STARTING_METAL: u128 = 50;
+    const STARTING_KNOWLEDGE: u128 = 25;
+    const STARTING_MILITARY: u128 = 10;
+    const BASE_GATHER_RATE: u128 = 10;
+    const TERRITORY_BONUS: u128 = 5;
+    const DEFEND_BONUS: u128 = 5;
+
+    // === Events ===
 
     #[derive(Copy, Drop, Serde)]
     #[dojo::event]
-    pub struct Moved {
+    pub struct CivSpawned {
         #[key]
-        pub player: ContractAddress,
-        pub direction: Direction,
+        pub civ_id: u32,
+        pub owner: ContractAddress,
     }
+
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
+    pub struct ActionPerformed {
+        #[key]
+        pub civ_id: u32,
+        pub turn: u32,
+        pub action: AgentAction,
+    }
+
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
+    pub struct CombatResult {
+        #[key]
+        pub attacker_civ: u32,
+        pub defender_civ: u32,
+        pub attacker_won: bool,
+        pub territory_x: u32,
+        pub territory_y: u32,
+    }
+
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
+    pub struct TradeExecuted {
+        #[key]
+        pub trade_id: u32,
+        pub from_civ: u32,
+        pub to_civ: u32,
+    }
+
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
+    pub struct TurnAdvanced {
+        #[key]
+        pub game_id: u32,
+        pub turn_number: u32,
+    }
+
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
+    pub struct GameEnded {
+        #[key]
+        pub game_id: u32,
+        pub winner_civ_id: u32,
+    }
+
+    // === Implementation ===
 
     #[abi(embed_v0)]
     impl ActionsImpl of IActions<ContractState> {
-        fn spawn(ref self: ContractState) {
-            // Get the default world.
+        fn start_game(ref self: ContractState, total_turns: u32) {
             let mut world = self.world_default();
+            let game: GameState = world.read_model(GAME_ID);
+            assert(game.game_phase == GamePhase::Setup, 'game already started');
 
-            // Get the address of the current caller, possibly the player's address.
-            let player = get_caller_address();
-            // Retrieve the player's current position from the world.
-            let position: Position = world.read_model(player);
-
-            // Update the world state with the new data.
-
-            // 1. Move the player's position 10 units in both the x and y direction.
-            let new_position = Position {
-                player, vec: Vec2 { x: position.vec.x + 10, y: position.vec.y + 10 },
+            let new_game = GameState {
+                game_id: GAME_ID,
+                turn_number: 1,
+                total_turns,
+                game_phase: GamePhase::Running,
+                civ_count: game.civ_count,
+                next_trade_id: game.next_trade_id,
             };
-
-            // Write the new position to the world.
-            world.write_model(@new_position);
-
-            // 2. Set the player's remaining moves to 100.
-            let moves = Moves {
-                player, remaining: 100, last_direction: Option::None, can_move: true,
-            };
-
-            // Write the new moves to the world.
-            world.write_model(@moves);
+            world.write_model(@new_game);
         }
 
-        // Implementation of the move function for the ContractState struct.
-        fn move(ref self: ContractState, direction: Direction) {
-            // Get the address of the current caller, possibly the player's address.
-
+        fn advance_turn(ref self: ContractState) {
             let mut world = self.world_default();
+            let mut game: GameState = world.read_model(GAME_ID);
+            assert(game.game_phase == GamePhase::Running, 'game not running');
 
-            let player = get_caller_address();
+            // Expire all active trades from the previous turn
+            let mut i: u32 = 0;
+            while i < game.next_trade_id {
+                let trade: TradeProposal = world.read_model(i);
+                if trade.is_active {
+                    let expired = TradeProposal { is_active: false, ..trade };
+                    world.write_model(@expired);
+                }
+                i += 1;
+            };
 
-            // Retrieve the player's current position and moves data from the world.
-            let position: Position = world.read_model(player);
-            let mut moves: Moves = world.read_model(player);
-            // if player hasn't spawn, read returns model default values. This leads to sub overflow
-            // afterwards.
-            // Plus it's generally considered as a good pratice to fast-return on matching
-            // conditions.
-            if !moves.can_move {
-                return;
+            game.turn_number += 1;
+
+            if game.turn_number > game.total_turns {
+                game.game_phase = GamePhase::Ended;
+                let winner_id = find_winner(@world, game.civ_count);
+                world.write_model(@game);
+                world.emit_event(@GameEnded { game_id: GAME_ID, winner_civ_id: winner_id });
+            } else {
+                world.write_model(@game);
+                world
+                    .emit_event(
+                        @TurnAdvanced { game_id: GAME_ID, turn_number: game.turn_number },
+                    );
+            }
+        }
+
+        fn spawn_civilization(ref self: ContractState) {
+            let mut world = self.world_default();
+            let caller = get_caller_address();
+
+            // Check player hasn't already spawned
+            let existing: PlayerCiv = world.read_model(caller);
+            assert(existing.civ_id == 0, 'already spawned');
+
+            let mut game: GameState = world.read_model(GAME_ID);
+            game.civ_count += 1;
+            let civ_id = game.civ_count;
+
+            let civ = Civilization {
+                civ_id,
+                owner: caller,
+                food: STARTING_FOOD,
+                metal: STARTING_METAL,
+                knowledge: STARTING_KNOWLEDGE,
+                territory_count: 1,
+                military_strength: STARTING_MILITARY,
+                last_action: AgentAction::Gather,
+                is_alive: true,
+            };
+
+            let strategy = Strategy { civ_id, aggression: 33, trade_focus: 33, growth_focus: 34 };
+
+            // Assign starting territory based on civ_id
+            let start_x = civ_id * 3;
+            let start_y = civ_id * 3;
+            let resource = match civ_id % 3 {
+                0 => ResourceType::Knowledge,
+                1 => ResourceType::Food,
+                2 => ResourceType::Metal,
+                _ => ResourceType::Food,
+            };
+            let territory = Territory {
+                x: start_x, y: start_y, owner_civ_id: civ_id, resource_type: resource,
+            };
+
+            let player_civ = PlayerCiv { owner: caller, civ_id };
+
+            world.write_model(@civ);
+            world.write_model(@strategy);
+            world.write_model(@territory);
+            world.write_model(@player_civ);
+            world.write_model(@game);
+
+            world.emit_event(@CivSpawned { civ_id, owner: caller });
+        }
+
+        fn set_strategy(
+            ref self: ContractState, aggression: u8, trade_focus: u8, growth_focus: u8,
+        ) {
+            let mut world = self.world_default();
+            let caller = get_caller_address();
+            let player_civ: PlayerCiv = world.read_model(caller);
+            assert(player_civ.civ_id != 0, 'no civilization');
+
+            let civ: Civilization = world.read_model(player_civ.civ_id);
+            assert(civ.owner == caller, 'not your civ');
+            assert(civ.is_alive, 'civ is dead');
+
+            let strategy = Strategy {
+                civ_id: player_civ.civ_id, aggression, trade_focus, growth_focus,
+            };
+            world.write_model(@strategy);
+        }
+
+        fn gather(ref self: ContractState) {
+            let mut world = self.world_default();
+            let (_, game, player_civ) = validate_action(@world);
+            let mut civ: Civilization = world.read_model(player_civ.civ_id);
+            assert(civ.is_alive, 'civ is dead');
+
+            // Base production + bonus per territory
+            let production = BASE_GATHER_RATE + (civ.territory_count.into() * TERRITORY_BONUS);
+
+            // Knowledge boosts gathering (up to +40%)
+            let knowledge_bonus = if civ.knowledge > 100 {
+                40_u128
+            } else {
+                civ.knowledge * 40 / 100
+            };
+            let boosted = production + (production * knowledge_bonus / 100);
+
+            civ.food += boosted;
+            civ.metal += boosted / 2;
+            civ.knowledge += boosted / 4;
+            civ.last_action = AgentAction::Gather;
+
+            world.write_model(@civ);
+            world
+                .emit_event(
+                    @ActionPerformed {
+                        civ_id: civ.civ_id, turn: game.turn_number, action: AgentAction::Gather,
+                    },
+                );
+        }
+
+        fn propose_trade(
+            ref self: ContractState,
+            to_civ: u32,
+            offer_type: ResourceType,
+            offer_amount: u128,
+            request_type: ResourceType,
+            request_amount: u128,
+        ) {
+            let mut world = self.world_default();
+            let (_, game, player_civ) = validate_action(@world);
+            let civ: Civilization = world.read_model(player_civ.civ_id);
+            assert(civ.is_alive, 'civ is dead');
+            assert(player_civ.civ_id != to_civ, 'cannot trade with self');
+
+            let target: Civilization = world.read_model(to_civ);
+            assert(target.is_alive, 'target is dead');
+
+            assert(has_resource(@civ, offer_type, offer_amount), 'insufficient resources');
+
+            let mut game_state: GameState = world.read_model(GAME_ID);
+            let trade_id = game_state.next_trade_id;
+            game_state.next_trade_id += 1;
+
+            let trade = TradeProposal {
+                trade_id,
+                from_civ: player_civ.civ_id,
+                to_civ,
+                offer_type,
+                offer_amount,
+                request_type,
+                request_amount,
+                is_active: true,
+            };
+
+            world.write_model(@trade);
+            world.write_model(@game_state);
+
+            let mut from_civ = civ;
+            from_civ.last_action = AgentAction::Trade;
+            world.write_model(@from_civ);
+
+            world
+                .emit_event(
+                    @ActionPerformed {
+                        civ_id: player_civ.civ_id,
+                        turn: game.turn_number,
+                        action: AgentAction::Trade,
+                    },
+                );
+        }
+
+        fn accept_trade(ref self: ContractState, trade_id: u32) {
+            let mut world = self.world_default();
+            let (_, _game, player_civ) = validate_action(@world);
+
+            let mut trade: TradeProposal = world.read_model(trade_id);
+            assert(trade.is_active, 'trade not active');
+            assert(trade.to_civ == player_civ.civ_id, 'not trade recipient');
+
+            let mut from_civ: Civilization = world.read_model(trade.from_civ);
+            let mut to_civ: Civilization = world.read_model(trade.to_civ);
+            assert(from_civ.is_alive, 'sender is dead');
+            assert(to_civ.is_alive, 'receiver is dead');
+
+            assert(has_resource(@from_civ, trade.offer_type, trade.offer_amount), 'sender lacks');
+            assert(
+                has_resource(@to_civ, trade.request_type, trade.request_amount), 'receiver lacks',
+            );
+
+            // Execute swap
+            deduct_resource(ref from_civ, trade.offer_type, trade.offer_amount);
+            add_resource(ref to_civ, trade.offer_type, trade.offer_amount);
+            deduct_resource(ref to_civ, trade.request_type, trade.request_amount);
+            add_resource(ref from_civ, trade.request_type, trade.request_amount);
+
+            trade.is_active = false;
+            to_civ.last_action = AgentAction::Trade;
+
+            world.write_model(@from_civ);
+            world.write_model(@to_civ);
+            world.write_model(@trade);
+
+            world
+                .emit_event(
+                    @TradeExecuted {
+                        trade_id, from_civ: trade.from_civ, to_civ: trade.to_civ,
+                    },
+                );
+        }
+
+        fn attack(ref self: ContractState, target_civ: u32) {
+            let mut world = self.world_default();
+            let (_, game, player_civ) = validate_action(@world);
+            let mut attacker: Civilization = world.read_model(player_civ.civ_id);
+            let mut defender: Civilization = world.read_model(target_civ);
+            assert(attacker.is_alive, 'attacker dead');
+            assert(defender.is_alive, 'defender dead');
+            assert(player_civ.civ_id != target_civ, 'cannot attack self');
+            assert(attacker.military_strength > 0, 'no military');
+
+            // Attack costs metal
+            let attack_cost: u128 = 10;
+            assert(attacker.metal >= attack_cost, 'not enough metal');
+            attacker.metal -= attack_cost;
+
+            // Defender gets bonus if last action was Defend
+            let defender_bonus: u128 = if defender.last_action == AgentAction::Defend {
+                DEFEND_BONUS
+            } else {
+                0
+            };
+            let def_strength = defender.military_strength + defender_bonus;
+
+            // Pseudo-random from turn + civ ids
+            let seed: u128 = game.turn_number.into()
+                * 31
+                + player_civ.civ_id.into()
+                * 17
+                + target_civ.into()
+                * 13;
+            let random_factor: u128 = seed % 20;
+
+            let attacker_power = attacker.military_strength + random_factor;
+            let attacker_won = attacker_power > def_strength;
+
+            if attacker_won {
+                // Transfer a territory
+                if defender.territory_count > 0 {
+                    let stolen_x = target_civ * 3;
+                    let stolen_y = target_civ * 3 + (defender.territory_count - 1);
+                    let mut terr: Territory = world.read_model((stolen_x, stolen_y));
+                    if terr.owner_civ_id == target_civ {
+                        terr.owner_civ_id = player_civ.civ_id;
+                        world.write_model(@terr);
+                        attacker.territory_count += 1;
+                        defender.territory_count -= 1;
+                    }
+                }
+
+                // Loot 25% of resources
+                let loot_food = defender.food / 4;
+                let loot_metal = defender.metal / 4;
+                defender.food -= loot_food;
+                defender.metal -= loot_metal;
+                attacker.food += loot_food;
+                attacker.metal += loot_metal;
+
+                attacker.military_strength += 2;
+                if defender.military_strength >= 3 {
+                    defender.military_strength -= 3;
+                } else {
+                    defender.military_strength = 0;
+                }
+
+                if defender.territory_count == 0 {
+                    defender.is_alive = false;
+                }
+            } else {
+                // Failed attack
+                if attacker.military_strength >= 2 {
+                    attacker.military_strength -= 2;
+                } else {
+                    attacker.military_strength = 0;
+                }
+                defender.military_strength += 1;
             }
 
-            // Deduct one from the player's remaining moves.
-            moves.remaining -= 1;
+            attacker.last_action = AgentAction::Attack;
 
-            // Update the last direction the player moved in.
-            moves.last_direction = Option::Some(direction);
+            world.write_model(@attacker);
+            world.write_model(@defender);
 
-            // Calculate the player's next position based on the provided direction.
-            let next = next_position(position, moves.last_direction);
+            world
+                .emit_event(
+                    @CombatResult {
+                        attacker_civ: player_civ.civ_id,
+                        defender_civ: target_civ,
+                        attacker_won,
+                        territory_x: target_civ * 3,
+                        territory_y: target_civ * 3,
+                    },
+                );
 
-            // Write the new position to the world.
-            world.write_model(@next);
+            world
+                .emit_event(
+                    @ActionPerformed {
+                        civ_id: player_civ.civ_id,
+                        turn: game.turn_number,
+                        action: AgentAction::Attack,
+                    },
+                );
+        }
 
-            // Write the new moves to the world.
-            world.write_model(@moves);
+        fn defend(ref self: ContractState) {
+            let mut world = self.world_default();
+            let (_, game, player_civ) = validate_action(@world);
+            let mut civ: Civilization = world.read_model(player_civ.civ_id);
+            assert(civ.is_alive, 'civ is dead');
 
-            // Emit an event to the world to notify about the player's move.
-            world.emit_event(@Moved { player, direction });
+            // Convert metal to military
+            let build_amount: u128 = if civ.metal >= 20 {
+                5
+            } else {
+                civ.metal / 4
+            };
+            if civ.metal >= build_amount {
+                civ.metal -= build_amount;
+            }
+            civ.military_strength += build_amount;
+            civ.last_action = AgentAction::Defend;
+
+            world.write_model(@civ);
+
+            world
+                .emit_event(
+                    @ActionPerformed {
+                        civ_id: civ.civ_id, turn: game.turn_number, action: AgentAction::Defend,
+                    },
+                );
         }
     }
 
+    // === Internal helpers ===
+
     #[generate_trait]
     impl InternalImpl of InternalTrait {
-        /// Use the default namespace "dojo_starter". This function is handy since the ByteArray
-        /// can't be const.
         fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
             self.world(@"dojo_starter")
         }
     }
-}
 
-// Define function like this:
-fn next_position(mut position: Position, direction: Option<Direction>) -> Position {
-    match direction {
-        Option::None => { return position; },
-        Option::Some(d) => match d {
-            Direction::Left => { position.vec.x -= 1; },
-            Direction::Right => { position.vec.x += 1; },
-            Direction::Up => { position.vec.y -= 1; },
-            Direction::Down => { position.vec.y += 1; },
-        },
+    fn validate_action(
+        world: @dojo::world::WorldStorage,
+    ) -> (ContractAddress, GameState, PlayerCiv) {
+        let caller = get_caller_address();
+        let game: GameState = world.read_model(GAME_ID);
+        assert(game.game_phase == GamePhase::Running, 'game not running');
+        let player_civ: PlayerCiv = world.read_model(caller);
+        assert(player_civ.civ_id != 0, 'no civilization');
+        (caller, game, player_civ)
     }
-    position
+
+    fn has_resource(civ: @Civilization, res_type: ResourceType, amount: u128) -> bool {
+        match res_type {
+            ResourceType::Food => *civ.food >= amount,
+            ResourceType::Metal => *civ.metal >= amount,
+            ResourceType::Knowledge => *civ.knowledge >= amount,
+        }
+    }
+
+    fn deduct_resource(ref civ: Civilization, res_type: ResourceType, amount: u128) {
+        match res_type {
+            ResourceType::Food => { civ.food -= amount; },
+            ResourceType::Metal => { civ.metal -= amount; },
+            ResourceType::Knowledge => { civ.knowledge -= amount; },
+        }
+    }
+
+    fn add_resource(ref civ: Civilization, res_type: ResourceType, amount: u128) {
+        match res_type {
+            ResourceType::Food => { civ.food += amount; },
+            ResourceType::Metal => { civ.metal += amount; },
+            ResourceType::Knowledge => { civ.knowledge += amount; },
+        }
+    }
+
+    fn find_winner(world: @dojo::world::WorldStorage, civ_count: u32) -> u32 {
+        let mut best_id: u32 = 0;
+        let mut best_score: u128 = 0;
+        let mut i: u32 = 1;
+        while i <= civ_count {
+            let civ: Civilization = world.read_model(i);
+            if civ.is_alive {
+                let score = civ.food
+                    + civ.metal
+                    + civ.knowledge
+                    + (civ.territory_count.into() * 50)
+                    + civ.military_strength;
+                if score > best_score {
+                    best_score = score;
+                    best_id = i;
+                }
+            }
+            i += 1;
+        };
+        best_id
+    }
 }
