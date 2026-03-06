@@ -7,7 +7,7 @@ mod tests {
         spawn_test_world,
     };
     use dojo_starter::models::{
-        GameState, m_Civilization, m_GameState, m_PlayerCiv, m_Strategy, m_Territory,
+        GamePhase, GameState, m_Civilization, m_GameState, m_PlayerCiv, m_Strategy, m_Territory,
         m_TradeProposal,
     };
     use dojo_starter::systems::actions::{IActionsDispatcher, IActionsDispatcherTrait, actions};
@@ -130,5 +130,30 @@ mod tests {
 
         let strategy: dojo_starter::models::Strategy = world.read_model(1_u32);
         assert(strategy.prompt_hash == 0x1234, 'prompt hash mismatch');
+    }
+
+    #[test]
+    fn test_two_civs_starts_game() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+
+        // Spawn first civ as default caller
+        actions_system.spawn_civilization();
+
+        // Switch caller to spawn second civ
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x1234>());
+        actions_system.spawn_civilization();
+
+        let game: GameState = world.read_model(1_u32);
+        assert(game.civ_count == 2, 'should have 2 civs');
+        assert(game.alive_count == 2, 'should have 2 alive');
+        // With 2+ civs, game phase transitions to Running (phase == 1)
+        assert(game.game_phase == GamePhase::Running, 'should be Running');
     }
 }
