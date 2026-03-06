@@ -550,6 +550,18 @@ export default function App() {
           {/* Prompt editor */}
           <div className="bg-gray-900/80 rounded-lg border border-gray-700 p-4">
             <label className="text-gray-400 text-sm block mb-2">Strategy Prompt — Tell your AI how to lead</label>
+            <div className="flex gap-1 mb-2 flex-wrap">
+              {[
+                ['🗡️ Aggro', 'Attack the weakest enemy every turn. Expand territory aggressively. Gather only when metal is low.'],
+                ['🛡️ Turtle', 'Defend every turn. Gather resources. Never attack first. Trade for food if below 50.'],
+                ['📈 Econ', 'Maximize resource gathering. Trade surplus metal for food. Only attack if victory is certain.'],
+                ['🎲 Chaos', 'Alternate between attacking random enemies and gathering. Propose absurd trades to confuse opponents.'],
+              ].map(([label, text]) => (
+                <button key={label} onClick={() => setPrompt(text)}
+                  className="px-2 py-0.5 rounded text-xs bg-gray-800 border border-gray-600 text-gray-400 hover:border-cyan-500 hover:text-cyan-400 transition-all"
+                >{label}</button>
+              ))}
+            </div>
             <textarea
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
