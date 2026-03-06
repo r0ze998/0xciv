@@ -583,7 +583,7 @@ export default function App() {
                 disabled={!!winner}
                 className="flex-1 py-2 rounded text-sm font-bold bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                {dataSource === 'torii' ? 'SYNC STATE' : 'NEXT TURN'}
+                {dataSource === 'torii' ? '🔄 REFRESH' : '⏩ NEXT TURN'}
               </button>
             </div>
           </div>
