@@ -22,7 +22,7 @@
 
 ## Priority C: If time allows
 - [ ] C1: Update Manus slides with 0xCIV name
-- [ ] C2: Demo video/GIF
+- [x] C2: Demo screenshot (assets/demo-screenshot.png, added to README)
 - [ ] C3: Sound effects
 
 ## Blocked

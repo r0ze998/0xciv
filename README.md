@@ -2,6 +2,8 @@
 
 > AI agent civilization strategy game on Starknet. Command your civilization with natural language prompts.
 
+![0xCIV Screenshot](assets/demo-screenshot.png)
+
 **Dojo Game Jam VIII** | March 6-8, 2026 | Theme: *"Stop fighting bots — design around them"*
 
 ## 🎮 What is 0xCIV?
