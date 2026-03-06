@@ -267,4 +267,47 @@ mod tests {
         assert(trade.offer_amount == 10, 'offer should be 10');
         assert(trade.request_amount == 5, 'request should be 5');
     }
+
+    #[test]
+    fn test_accept_trade() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x1234>());
+        actions_system.spawn_civilization();
+
+        // Civ 1 proposes: 10 food for 5 metal
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x0>());
+        actions_system.propose_trade(
+            2,
+            dojo_starter::models::ResourceType::Food,
+            10,
+            dojo_starter::models::ResourceType::Metal,
+            5,
+        );
+
+        let civ1_before: dojo_starter::models::Civilization = world.read_model(1_u32);
+        let civ2_before: dojo_starter::models::Civilization = world.read_model(2_u32);
+
+        // Civ 2 accepts
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x1234>());
+        actions_system.accept_trade(0);
+
+        let civ1_after: dojo_starter::models::Civilization = world.read_model(1_u32);
+        let civ2_after: dojo_starter::models::Civilization = world.read_model(2_u32);
+
+        // Civ 1: -10 food, +5 metal
+        assert(civ1_after.food == civ1_before.food - 10, 'civ1 food should decrease');
+        assert(civ1_after.metal == civ1_before.metal + 5, 'civ1 metal should increase');
+        // Civ 2: +10 food, -5 metal
+        assert(civ2_after.food == civ2_before.food + 10, 'civ2 food should increase');
+        assert(civ2_after.metal == civ2_before.metal - 5, 'civ2 metal should decrease');
+    }
 }
