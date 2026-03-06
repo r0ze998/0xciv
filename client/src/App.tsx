@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { fetchAllOnChainData, OnChainCivilization, OnChainTerritory, OnChainGameState } from './torii'
+import { connectWallet, disconnectWallet } from './cartridge'
 
 // Types
 type ResourceType = 'food' | 'metal' | 'knowledge'
@@ -299,6 +300,7 @@ export default function App() {
   const [prompt, setPrompt] = useState('')
   const [winner, setWinner] = useState<Civilization | null>(null)
   const [dataSource, setDataSource] = useState<'loading' | 'torii' | 'mock'>('loading')
+  const [walletAddress, setWalletAddress] = useState<string | null>(null)
 
   const playerCiv = civs[selectedCiv]
 
@@ -441,6 +443,22 @@ export default function App() {
           </span>
           <span className="text-gray-500 text-sm">Turn {turn}</span>
           <span className="text-gray-600 text-sm">Alive: {civs.filter(c => c.isAlive).length}/{civs.length}</span>
+          <button
+            onClick={async () => {
+              if (walletAddress) {
+                await disconnectWallet()
+                setWalletAddress(null)
+              } else {
+                try {
+                  const acct = await connectWallet()
+                  if (acct?.address) setWalletAddress(acct.address)
+                } catch {}
+              }
+            }}
+            className="px-3 py-1 rounded text-xs font-bold border border-fuchsia-500 text-fuchsia-400 hover:bg-fuchsia-500/10 transition-all"
+          >
+            {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : '🔗 Connect'}
+          </button>
         </div>
       </div>
 
