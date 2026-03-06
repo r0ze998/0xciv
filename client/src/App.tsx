@@ -242,7 +242,7 @@ function GridMap({ grid, civs, selectedCiv }: { grid: Territory[][]; civs: Civil
       })}
       {/* Territory legend */}
       <div className="col-span-5 flex justify-center gap-3 pt-1">
-        {civs.filter(c => c.alive).map((c, i) => {
+        {civs.filter(c => c.isAlive).map((c, i) => {
           const count = grid.flat().filter(t => t.owner === civs.indexOf(c)).length
           return (
             <span key={i} className="text-xs flex items-center gap-1">
