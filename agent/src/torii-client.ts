@@ -4,6 +4,12 @@ import { Civilization, Territory, GameState, TradeProposal } from './types'
 
 const TORII_URL = process.env.TORII_URL || 'http://localhost:8080/graphql'
 
+function parseNum(v: any): number {
+  if (typeof v === 'number') return v
+  if (typeof v === 'string' && v.startsWith('0x')) return parseInt(v, 16)
+  return parseInt(v) || 0
+}
+
 async function query(q: string): Promise<any> {
   const res = await fetch(TORII_URL, {
     method: 'POST',
@@ -18,55 +24,56 @@ async function query(q: string): Promise<any> {
 
 export async function getGameState(gameId: number): Promise<GameState> {
   const data = await query(`{
-    gameStateModels(where: { game_id: ${gameId} }) {
+    dojoStarterGameStateModels(where: { game_id: ${gameId} }) {
       edges { node {
         game_id turn_number game_phase civ_count alive_count next_trade_id
       }}
     }
   }`)
-  const node = data.gameStateModels.edges[0]?.node
+  const node = data.dojoStarterGameStateModels.edges[0]?.node
   if (!node) throw new Error('Game not found')
+  const phaseMap: Record<string, string> = { 'Lobby': 'lobby', 'Running': 'active', 'Ended': 'ended' }
   return {
     game_id: node.game_id,
-    turn_number: node.turn_number,
-    game_phase: node.game_phase === 0 ? 'lobby' : node.game_phase === 1 ? 'active' : 'ended',
-    civ_count: node.civ_count,
-    alive_count: node.alive_count,
+    turn_number: typeof node.turn_number === 'string' ? parseInt(node.turn_number, 16) : node.turn_number,
+    game_phase: (phaseMap[node.game_phase] || (node.game_phase === 0 ? 'lobby' : node.game_phase === 1 ? 'active' : 'ended')) as 'lobby' | 'active' | 'ended',
+    civ_count: typeof node.civ_count === 'string' ? parseInt(node.civ_count, 16) : node.civ_count,
+    alive_count: typeof node.alive_count === 'string' ? parseInt(node.alive_count, 16) : node.alive_count,
     next_trade_id: node.next_trade_id,
   }
 }
 
 export async function getCivilizations(gameId: number): Promise<Civilization[]> {
   const data = await query(`{
-    civilizationModels(where: { game_id: ${gameId} }, limit: 10) {
+    dojoStarterCivilizationModels(limit: 10) {
       edges { node {
         civ_id owner hp food metal knowledge territory_count military_strength is_alive
       }}
     }
   }`)
-  return data.civilizationModels.edges.map((e: any) => ({
-    civ_id: e.node.civ_id,
+  return data.dojoStarterCivilizationModels.edges.map((e: any) => ({
+    civ_id: parseNum(e.node.civ_id),
     owner: e.node.owner,
-    hp: e.node.hp,
-    food: e.node.food,
-    metal: e.node.metal,
-    knowledge: e.node.knowledge,
-    territory_count: e.node.territory_count,
-    military_strength: e.node.military_strength,
+    hp: parseNum(e.node.hp),
+    food: parseNum(e.node.food),
+    metal: parseNum(e.node.metal),
+    knowledge: parseNum(e.node.knowledge),
+    territory_count: parseNum(e.node.territory_count),
+    military_strength: parseNum(e.node.military_strength),
     is_alive: !!e.node.is_alive,
   }))
 }
 
 export async function getTerritories(gameId: number): Promise<Territory[]> {
   const data = await query(`{
-    territoryModels(where: { game_id: ${gameId} }, limit: 30) {
+    dojoStarterTerritoryModels(limit: 30) {
       edges { node {
         x y owner_civ_id resource_type
       }}
     }
   }`)
   const resourceMap = ['food', 'metal', 'knowledge'] as const
-  return data.territoryModels.edges.map((e: any) => ({
+  return data.dojoStarterTerritoryModels.edges.map((e: any) => ({
     x: e.node.x,
     y: e.node.y,
     owner_civ_id: e.node.owner_civ_id,
@@ -76,14 +83,14 @@ export async function getTerritories(gameId: number): Promise<Territory[]> {
 
 export async function getActiveTrades(gameId: number): Promise<TradeProposal[]> {
   const data = await query(`{
-    tradeProposalModels(where: { game_id: ${gameId}, is_active: true }, limit: 20) {
+    dojoStarterTradeProposalModels(limit: 20) {
       edges { node {
         trade_id from_civ to_civ offer_type offer_amount request_type request_amount is_active
       }}
     }
   }`)
   const resourceMap = ['food', 'metal', 'knowledge'] as const
-  return data.tradeProposalModels.edges.map((e: any) => ({
+  return data.dojoStarterTradeProposalModels.edges.map((e: any) => ({
     trade_id: e.node.trade_id,
     from_civ: e.node.from_civ,
     to_civ: e.node.to_civ,
