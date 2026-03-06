@@ -1,7 +1,7 @@
 {
-  "name": "agent",
+  "name": "0xciv-agent",
   "version": "1.0.0",
-  "description": "",
+  "description": "AI agent for 0xCIV — reads on-chain state, decides actions via Claude",
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/index.ts",
