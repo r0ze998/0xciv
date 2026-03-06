@@ -209,4 +209,30 @@ mod tests {
         assert(civ.hp == 100, 'hp should be 100 after defend');
         assert(civ.is_alive, 'civ should still be alive');
     }
+
+    #[test]
+    fn test_attack_damages_target() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x1234>());
+        actions_system.spawn_civilization();
+
+        // Civ 1 attacks civ 2
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x0>());
+        actions_system.attack(2);
+
+        // One of them should have taken damage
+        let civ1: dojo_starter::models::Civilization = world.read_model(1_u32);
+        let civ2: dojo_starter::models::Civilization = world.read_model(2_u32);
+        // At least one HP changed from 100
+        assert(civ1.hp < 100 || civ2.hp < 100, 'someone should take damage');
+    }
 }
