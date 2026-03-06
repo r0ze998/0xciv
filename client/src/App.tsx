@@ -417,9 +417,10 @@ export default function App() {
         >
           START GAME
         </button>
-        <p className="text-gray-600 text-sm mt-4">
-          {dataSource === 'torii' ? 'Connected to Torii (on-chain)' :
-           dataSource === 'mock' ? 'Mock mode (Torii unavailable)' :
+        <p className="text-gray-600 text-sm mt-4 flex items-center justify-center gap-2">
+          {dataSource === 'loading' && <span className="animate-spin">⏳</span>}
+          {dataSource === 'torii' ? '🟢 Connected to Torii (on-chain)' :
+           dataSource === 'mock' ? '🟡 Mock mode (Torii unavailable)' :
            'Connecting to Torii...'}
         </p>
         <p className="text-gray-700 text-xs mt-1">Dojo Game Jam VIII</p>
