@@ -308,7 +308,7 @@ export default function App() {
   // Try to load on-chain data from Torii
   const syncFromTorii = useCallback(async () => {
     try {
-      const { gameState, civs: onChainCivs, territories } = await fetchAllOnChainData(1)
+      const { gameState, civs: onChainCivs, territories, events } = await fetchAllOnChainData(1)
 
       if (!gameState || onChainCivs.length === 0) {
         if (dataSource === 'loading') {
@@ -337,6 +337,21 @@ export default function App() {
       if (uiPhase === 'ended') {
         const alive = uiCivs.find(c => c.isAlive)
         if (alive) setWinner(alive)
+      }
+
+      // Convert on-chain events to log entries
+      if (events && events.length > 0) {
+        const eventLogs: LogEntry[] = events.map(e => {
+          if (e.type === 'action') {
+            return { turn: e.turn || 0, message: `Civ #${e.civ_id} performed ${e.action}`, type: 'system' as const }
+          } else if (e.type === 'combat') {
+            return { turn: 0, message: `⚔️ Civ #${e.attacker_civ} attacked Civ #${e.defender_civ} — ${e.attacker_won ? 'Victory' : 'Repelled'}! ${e.hp_damage} damage`, type: 'combat' as const }
+          } else if (e.type === 'elimination') {
+            return { turn: 0, message: `☠️ Civ #${e.civ_id} has been eliminated!`, type: 'elimination' as const }
+          }
+          return { turn: 0, message: `Trade event`, type: 'trade' as const }
+        })
+        setLogs(eventLogs)
       }
 
       if (dataSource !== 'torii') {

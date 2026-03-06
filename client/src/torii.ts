@@ -109,11 +109,57 @@ export async function fetchTerritories(_gameId?: number): Promise<OnChainTerrito
   }))
 }
 
+export interface OnChainEvent {
+  type: 'action' | 'combat' | 'elimination' | 'trade'
+  civ_id?: number
+  turn?: number
+  action?: string
+  attacker_civ?: number
+  defender_civ?: number
+  attacker_won?: boolean
+  hp_damage?: number
+}
+
+export async function fetchEvents(): Promise<OnChainEvent[]> {
+  const data = await query(`{
+    dojoStarterActionPerformedModels(limit: 20) {
+      edges { node { civ_id turn action } }
+    }
+    dojoStarterCombatResultModels(limit: 20) {
+      edges { node { attacker_civ defender_civ attacker_won hp_damage } }
+    }
+    dojoStarterCivEliminatedModels(limit: 10) {
+      edges { node { civ_id } }
+    }
+  }`)
+
+  const events: OnChainEvent[] = []
+
+  for (const e of data.dojoStarterActionPerformedModels?.edges || []) {
+    events.push({ type: 'action', civ_id: e.node.civ_id, turn: e.node.turn, action: e.node.action })
+  }
+  for (const e of data.dojoStarterCombatResultModels?.edges || []) {
+    events.push({
+      type: 'combat',
+      attacker_civ: e.node.attacker_civ,
+      defender_civ: e.node.defender_civ,
+      attacker_won: !!e.node.attacker_won,
+      hp_damage: parseNum(e.node.hp_damage),
+    })
+  }
+  for (const e of data.dojoStarterCivEliminatedModels?.edges || []) {
+    events.push({ type: 'elimination', civ_id: e.node.civ_id })
+  }
+
+  return events
+}
+
 export async function fetchAllOnChainData(gameId: number = 1) {
-  const [gameState, civs, territories] = await Promise.all([
+  const [gameState, civs, territories, events] = await Promise.all([
     fetchGameState(gameId),
     fetchCivilizations(gameId),
     fetchTerritories(),
+    fetchEvents(),
   ])
-  return { gameState, civs, territories }
+  return { gameState, civs, territories, events }
 }
