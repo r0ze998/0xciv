@@ -5,7 +5,7 @@
 - [x] A2: Fix frontend torii.ts to match actual Torii GraphQL schema (dojoStarter prefix, hex parsing)
 - [x] A3: Add game loop to agent (run multiple turns automatically)
 - [x] A4: Error handling in agent (retry on fail, graceful shutdown)
-- [ ] A5: Create submission PR to dojoengine/game-jams repo
+- [~] A5: Create submission PR to dojoengine/game-jams repo — file ready, need Slot deploy first
 
 ## Priority B: Nice-to-have
 - [x] B1: Frontend loading states and error messages
