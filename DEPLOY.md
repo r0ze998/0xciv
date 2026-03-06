@@ -48,4 +48,11 @@ cd game-jams && git add -A && git commit -m "Submit 0xCIV" && git push
 gh pr create --title "[Project Registration]: 0xCIV" --body "AI civilization prompt strategy game"
 ```
 
+## Step 0 (もしまだなら): プロジェクト登録Issue
+
+```bash
+# dojoengine/game-jams に登録Issue作成（Webから）
+# https://github.com/dojoengine/game-jams/issues/new?assignees=&labels=&projects=&template=register_project.yaml&title=%5BProject+Registration%5D:+0xCIV
+```
+
 ## 所要時間: 約15分
