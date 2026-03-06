@@ -94,12 +94,21 @@ export async function executeAction(civId: number, action: AgentAction): Promise
 
   console.log(`Executing ${entrypoint} on-chain...`)
 
-  const result = await account.execute({
-    contractAddress: CONTRACT_ADDRESS,
-    entrypoint,
-    calldata,
-  })
-
-  console.log(`TX hash: ${result.transaction_hash}`)
-  return result.transaction_hash
+  const MAX_RETRIES = 3
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await account.execute({
+        contractAddress: CONTRACT_ADDRESS,
+        entrypoint,
+        calldata,
+      })
+      console.log(`TX hash: ${result.transaction_hash}`)
+      return result.transaction_hash
+    } catch (err: any) {
+      console.error(`TX attempt ${attempt}/${MAX_RETRIES} failed: ${err.message}`)
+      if (attempt === MAX_RETRIES) throw err
+      await new Promise(r => setTimeout(r, 1000 * attempt))
+    }
+  }
+  throw new Error('Unreachable')
 }
