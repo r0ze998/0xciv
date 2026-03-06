@@ -5,7 +5,7 @@
 - [x] A2: Frontend Torii integration (dojoStarter prefix, hex parsing)
 - [x] A3: Agent game loop (multi-turn auto-execution)
 - [x] A4: Agent error handling (retry, timeout, graceful shutdown)
-- [~] A5: Submission PR to dojoengine/game-jams — file ready, need Slot deploy
+- [x] A5: Submission PR to dojoengine/game-jams — PR #270 merged
 
 ## Priority B: Nice-to-have (DONE)
 - [x] B1: Loading states, ON-CHAIN/MOCK badges
@@ -25,5 +25,8 @@
 - [x] C2: Demo screenshot (assets/demo-screenshot.png, added to README)
 - [x] C3: Sound effects (Web Audio API synth SFX — gather, attack, defend, trade, elimination, game over)
 
-## Blocked
-- **Slot deployment**: Requires `slot auth login` from r0ze (see DEPLOY.md)
+## Deployment (DONE)
+- Katana: https://api.cartridge.gg/x/0xciv/katana
+- Torii: https://api.cartridge.gg/x/0xciv/torii/graphql
+- World: 0x026d5777eccca1861a23303ee0ba48c0e8349e849d0377a21c3801ef1d0f8cef
+- PR: https://github.com/dojoengine/game-jams/pull/270
