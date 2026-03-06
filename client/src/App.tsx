@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { fetchAllOnChainData, OnChainCivilization, OnChainTerritory, OnChainGameState } from './torii'
 import { connectWallet, disconnectWallet } from './cartridge'
+import { executeAdvanceTurn, executeSetStrategy } from './actions'
 
 // Types
 type ResourceType = 'food' | 'metal' | 'knowledge'
