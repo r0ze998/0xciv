@@ -17,7 +17,7 @@ Same game state + different prompt = different outcome. **The game IS prompt eng
    - *"Prioritize knowledge. If attacked, retaliate with full force. Keep food above 50 at all costs."*
    - *"Attack the weakest neighbor every turn. Expand territory aggressively."*
    - *"Defend and trade only. Never attack first."*
-3. **Advance** the turn — your AI agent (Daydreams) reads the game state and executes actions based on your prompt
+3. **Advance** the turn — your AI agent (Claude) reads the game state and executes actions based on your prompt
 4. **Watch** the results, edit your prompt anytime
 5. **Survive** — last civilization standing wins
 
@@ -45,6 +45,25 @@ Your civilization is eliminated if **any** of these happen:
 | Indexer | **Torii** (GraphQL) |
 | Devnet | **Katana** |
 | Frontend | React + @dojoengine/sdk + Tailwind CSS |
+
+## 🏛️ Architecture
+
+```
+┌─────────────┐     ┌──────────────┐     ┌──────────────┐
+│  Frontend    │────▶│   Torii      │◀────│   Katana     │
+│  React UI   │     │   (GraphQL)  │     │   (Devnet)   │
+└─────┬───────┘     └──────────────┘     └──────┬───────┘
+      │                                         │
+      │  strategy prompt                        │ on-chain state
+      ▼                                         │
+┌─────────────┐     ┌──────────────┐            │
+│  AI Agent   │────▶│  Claude API  │            │
+│  (Node.js)  │     │  (Decision)  │            │
+└─────┬───────┘     └──────────────┘            │
+      │                                         │
+      │  execute(gather/attack/defend/trade)     │
+      └─────────────────────────────────────────┘
+```
 
 ## 🔧 Build & Run
 

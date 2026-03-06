@@ -439,7 +439,17 @@ export default function App() {
            dataSource === 'mock' ? '🟡 Mock mode (Torii unavailable)' :
            'Connecting to Torii...'}
         </p>
-        <p className="text-gray-700 text-xs mt-1">Dojo Game Jam VIII</p>
+        <div className="mt-6 max-w-md text-left bg-gray-900/60 rounded-lg border border-gray-800 p-4">
+          <h3 className="text-cyan-400 text-sm font-bold mb-2">🎮 How to Play</h3>
+          <ol className="text-gray-400 text-xs space-y-1 list-decimal list-inside">
+            <li>Write a <span className="text-cyan-300">strategy prompt</span> to command your AI civilization</li>
+            <li>Your AI reads on-chain state and decides: gather, attack, defend, or trade</li>
+            <li>Last civilization standing wins — <span className="text-red-400">HP=0, Food=0, or no territories = eliminated</span></li>
+            <li>Opponent prompts are <span className="text-fuchsia-300">hidden</span> — information warfare!</li>
+          </ol>
+          <p className="text-gray-500 text-xs mt-2 italic">Theme: "Stop fighting bots — design around them"</p>
+        </div>
+        <p className="text-gray-700 text-xs mt-4">Dojo Game Jam VIII</p>
       </div>
     )
   }
