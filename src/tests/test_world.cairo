@@ -310,4 +310,26 @@ mod tests {
         assert(civ2_after.food == civ2_before.food + 10, 'civ2 food should increase');
         assert(civ2_after.metal == civ2_before.metal - 5, 'civ2 metal should decrease');
     }
+
+    #[test]
+    fn test_advance_turn() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x1234>());
+        actions_system.spawn_civilization();
+
+        let game_before: GameState = world.read_model(1_u32);
+        actions_system.advance_turn();
+        let game_after: GameState = world.read_model(1_u32);
+
+        assert(game_after.turn_number == game_before.turn_number + 1, 'turn should increment');
+    }
 }

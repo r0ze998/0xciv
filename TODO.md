@@ -1,19 +1,29 @@
-# 0xCIV — Remaining Tasks (Task 5: Polish + Submit)
+# 0xCIV — Tasks
 
 ## Priority A: Must-have for submission
-- [x] A1: Update README.md with setup instructions, screenshots description, architecture
-- [x] A2: Fix frontend torii.ts to match actual Torii GraphQL schema (dojoStarter prefix, hex parsing)
-- [x] A3: Add game loop to agent (run multiple turns automatically)
-- [x] A4: Error handling in agent (retry on fail, graceful shutdown)
-- [~] A5: Create submission PR to dojoengine/game-jams repo — file ready, need Slot deploy first
+- [x] A1: README with setup, architecture diagram, how to play
+- [x] A2: Frontend Torii integration (dojoStarter prefix, hex parsing)
+- [x] A3: Agent game loop (multi-turn auto-execution)
+- [x] A4: Agent error handling (retry, timeout, graceful shutdown)
+- [~] A5: Submission PR to dojoengine/game-jams — file ready, need Slot deploy
 
-## Priority B: Nice-to-have
-- [x] B1: Frontend loading states and error messages
-- [x] B2: Add advance_turn script/button integration
-- [x] B3: Multi-agent mode (run 4 agents simultaneously with different prompts)
-- [x] B4: Better turn log display with real on-chain events
+## Priority B: Nice-to-have (DONE)
+- [x] B1: Loading states, ON-CHAIN/MOCK badges
+- [x] B2: advance_turn integration
+- [x] B3: Multi-agent mode (4 agents simultaneous)
+- [x] B4: On-chain event log with type icons
+- [x] B5: Preset strategy prompts (Aggro/Turtle/Econ/Chaos)
+- [x] B6: Resource bars with danger indicators
+- [x] B7: Game over: winning strategy reveal
+- [x] B8: Keyboard shortcuts (N=next turn, 1-4=select civ)
+- [x] B9: Territory count legend on map
+- [x] B10: Cyberpunk UI (title glow, scanline effect)
+- [x] B11: 12 passing Cairo tests (all core actions covered)
 
 ## Priority C: If time allows
 - [ ] C1: Update Manus slides with 0xCIV name
 - [ ] C2: Demo video/GIF
 - [ ] C3: Sound effects
+
+## Blocked
+- **Slot deployment**: Requires `slot auth login` from r0ze (see DEPLOY.md)
