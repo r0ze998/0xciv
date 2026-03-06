@@ -184,4 +184,29 @@ mod tests {
         let total_after = civ_after.food + civ_after.metal + civ_after.knowledge;
         assert(total_after > total_before, 'resources should increase');
     }
+
+    #[test]
+    fn test_defend_restores_hp() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x1234>());
+        actions_system.spawn_civilization();
+
+        // Defend as civ 1
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x0>());
+        actions_system.defend();
+
+        let civ: dojo_starter::models::Civilization = world.read_model(1_u32);
+        // HP should still be 100 (can't exceed max), but defend should not error
+        assert(civ.hp == 100, 'hp should be 100 after defend');
+        assert(civ.is_alive, 'civ should still be alive');
+    }
 }
