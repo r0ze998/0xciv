@@ -234,11 +234,24 @@ function GridMap({ grid, civs, selectedCiv }: { grid: Territory[][]; civs: Civil
               borderColor: owner ? owner.color : '#374151',
               boxShadow: owner ? `0 0 8px ${owner.color}44` : 'none',
             }}
+            title={`(${t.x},${t.y}) ${t.resource}${owner ? ` — ${owner.name}` : ''}`}
           >
             <span className="text-sm">{RESOURCE_ICONS[t.resource]}</span>
           </div>
         )
       })}
+      {/* Territory legend */}
+      <div className="col-span-5 flex justify-center gap-3 pt-1">
+        {civs.filter(c => c.alive).map((c, i) => {
+          const count = grid.flat().filter(t => t.owner === civs.indexOf(c)).length
+          return (
+            <span key={i} className="text-xs flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: c.color }} />
+              <span style={{ color: c.color }}>{count}</span>
+            </span>
+          )
+        })}
+      </div>
     </div>
   )
 }
