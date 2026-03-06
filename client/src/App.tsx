@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { fetchAllOnChainData } from './torii'
 import type { OnChainCivilization, OnChainTerritory } from './torii'
 import { connectWallet, disconnectWallet } from './cartridge'
+import { sfxTurn, sfxAttack, sfxGather, sfxDefend, sfxTrade, sfxElimination, sfxGameOver } from './sfx'
 
 // Types
 type ResourceType = 'food' | 'metal' | 'knowledge'
@@ -433,12 +434,22 @@ export default function App() {
     setGrid(result.grid)
     setLogs(prev => [...prev, ...result.logs])
     setTurn(newTurn)
+    // Play SFX based on log types
+    sfxTurn()
+    for (const log of result.logs) {
+      if (log.type === 'combat') sfxAttack()
+      else if (log.type === 'trade') sfxTrade()
+      else if (log.type === 'elimination') sfxElimination()
+      else if (log.type === 'action' && log.message.includes('Gather')) sfxGather()
+      else if (log.type === 'action' && log.message.includes('Defend')) sfxDefend()
+    }
 
     const alive = result.civs.filter(c => c.isAlive)
     if (alive.length <= 1 && result.civs.length > 1) {
       const w = alive[0] || result.civs[0]
       setWinner(w)
       setPhase('ended')
+      sfxGameOver()
       setLogs(prev => [...prev, { turn: newTurn, message: `${w.name} is the last civilization standing!`, type: 'system' }])
     }
   }

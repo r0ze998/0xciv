@@ -23,7 +23,7 @@
 ## Priority C: If time allows
 - [x] C1: 0xCIV pitch slides (assets/slides.html — reveal.js, 8 slides)
 - [x] C2: Demo screenshot (assets/demo-screenshot.png, added to README)
-- [ ] C3: Sound effects
+- [x] C3: Sound effects (Web Audio API synth SFX — gather, attack, defend, trade, elimination, game over)
 
 ## Blocked
 - **Slot deployment**: Requires `slot auth login` from r0ze (see DEPLOY.md)
