@@ -66,6 +66,24 @@ export async function executeCreateGame() {
   }])
 }
 
+export async function executeProposeTrade(toCiv: number, offerType: number, offerAmount: number, requestType: number, requestAmount: number) {
+  const account = await getAccount()
+  return account.execute([{
+    contractAddress: ACTIONS_CONTRACT,
+    entrypoint: 'propose_trade',
+    calldata: [toCiv.toString(), offerType.toString(), offerAmount.toString(), requestType.toString(), requestAmount.toString()],
+  }])
+}
+
+export async function executeAcceptTrade(tradeId: number) {
+  const account = await getAccount()
+  return account.execute([{
+    contractAddress: ACTIONS_CONTRACT,
+    entrypoint: 'accept_trade',
+    calldata: [tradeId.toString()],
+  }])
+}
+
 export async function executeSpawnCivilization() {
   const account = await getAccount()
   return account.execute([{
