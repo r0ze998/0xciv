@@ -20,16 +20,23 @@ export interface OnChainTerritory {
   x: number
   y: number
   owner_civ_id: number
-  resource_type: number // 0=food, 1=metal, 2=knowledge
+  resource_type: string // "Food" | "Metal" | "Knowledge" or number
 }
 
 export interface OnChainGameState {
   game_id: number
   turn_number: number
-  game_phase: number // 0=Setup, 1=Running, 2=Ended
+  game_phase: string // "Setup" | "Running" | "Ended"
   civ_count: number
   alive_count: number
   next_trade_id: number
+}
+
+// Parse hex string or number from Torii
+function parseNum(v: any): number {
+  if (typeof v === 'number') return v
+  if (typeof v === 'string' && v.startsWith('0x')) return parseInt(v, 16)
+  return Number(v) || 0
 }
 
 async function query(q: string): Promise<any> {
@@ -76,12 +83,12 @@ export async function fetchCivilizations(gameId: number): Promise<OnChainCiviliz
   return (data.dojoStarterCivilizationModels?.edges || []).map((e: any) => ({
     civ_id: e.node.civ_id,
     owner: e.node.owner,
-    hp: Number(e.node.hp),
-    food: Number(e.node.food),
-    metal: Number(e.node.metal),
-    knowledge: Number(e.node.knowledge),
-    territory_count: e.node.territory_count,
-    military_strength: Number(e.node.military_strength),
+    hp: parseNum(e.node.hp),
+    food: parseNum(e.node.food),
+    metal: parseNum(e.node.metal),
+    knowledge: parseNum(e.node.knowledge),
+    territory_count: parseNum(e.node.territory_count),
+    military_strength: parseNum(e.node.military_strength),
     is_alive: !!e.node.is_alive,
   }))
 }

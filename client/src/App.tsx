@@ -63,6 +63,16 @@ function onChainCivToUI(civ: OnChainCivilization, index: number): Civilization {
   }
 }
 
+function parseResourceType(rt: string | number): ResourceType {
+  if (typeof rt === 'string') {
+    const lower = rt.toLowerCase()
+    if (lower === 'metal') return 'metal'
+    if (lower === 'knowledge') return 'knowledge'
+    return 'food'
+  }
+  return RESOURCE_MAP[rt] || 'food'
+}
+
 function onChainTerritoriesToGrid(territories: OnChainTerritory[]): Territory[][] {
   const grid: Territory[][] = Array.from({ length: GRID_SIZE }, (_, y) =>
     Array.from({ length: GRID_SIZE }, (_, x) => ({
@@ -75,16 +85,16 @@ function onChainTerritoriesToGrid(territories: OnChainTerritory[]): Territory[][
         x: t.x,
         y: t.y,
         owner: t.owner_civ_id > 0 ? t.owner_civ_id - 1 : null, // civ_id is 1-indexed on-chain
-        resource: RESOURCE_MAP[t.resource_type] || 'food',
+        resource: parseResourceType(t.resource_type),
       }
     }
   }
   return grid
 }
 
-function gamePhaseToUI(phase: number): Phase {
-  if (phase === 0) return 'lobby'
-  if (phase === 2) return 'ended'
+function gamePhaseToUI(phase: number | string): Phase {
+  if (phase === 0 || phase === 'Setup') return 'lobby'
+  if (phase === 2 || phase === 'Ended') return 'ended'
   return 'playing'
 }
 
