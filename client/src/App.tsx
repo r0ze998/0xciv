@@ -414,12 +414,12 @@ export default function App() {
   if (phase === 'lobby') {
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white p-8">
-        <h1 className="text-6xl font-black mb-2 tracking-wider" style={{
+        <h1 className="text-6xl font-black mb-2 tracking-wider title-glow" style={{
           background: 'linear-gradient(135deg, #00ffff, #ff00ff)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
         }}>0xCIV</h1>
-        <p className="text-gray-500 mb-8 text-lg">Your Words Shape Civilizations</p>
+        <p className="text-gray-500 mb-8 text-lg tracking-wide">Your Words Shape Civilizations</p>
         <div className="grid grid-cols-2 gap-4 mb-8">
           {COLORS.map((c, i) => (
             <div key={i} className="px-6 py-3 rounded-lg border text-center" style={{ borderColor: c.color, color: c.color }}>

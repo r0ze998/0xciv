@@ -1,1 +1,28 @@
 @import "tailwindcss";
+
+@keyframes pulse-glow {
+  0%, 100% { text-shadow: 0 0 20px rgba(0, 255, 255, 0.3), 0 0 40px rgba(255, 0, 255, 0.2); }
+  50% { text-shadow: 0 0 30px rgba(0, 255, 255, 0.6), 0 0 60px rgba(255, 0, 255, 0.4); }
+}
+
+.title-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+.scanline::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(0, 255, 255, 0.08);
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+  z-index: 100;
+}
