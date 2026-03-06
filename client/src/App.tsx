@@ -493,8 +493,8 @@ export default function App() {
           <span className={`text-xs px-2 py-0.5 rounded ${dataSource === 'torii' ? 'bg-green-900 text-green-400' : 'bg-yellow-900 text-yellow-400'}`}>
             {dataSource === 'torii' ? 'ON-CHAIN' : 'MOCK'}
           </span>
-          <span className="text-gray-500 text-sm">Turn {turn}</span>
-          <span className="text-gray-600 text-sm">Alive: {civs.filter(c => c.isAlive).length}/{civs.length}</span>
+          <span className="text-cyan-400 text-sm font-mono font-bold">T{turn}</span>
+          <span className="text-gray-500 text-sm">{civs.filter(c => c.isAlive).length}/{civs.length} alive</span>
           <button
             onClick={async () => {
               if (walletAddress) {

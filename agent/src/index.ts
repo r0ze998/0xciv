@@ -35,6 +35,13 @@ ELIMINATION CONDITIONS (avoid these!):
 - Food reaches 0 → starvation death
 - All territories lost → death
 
+TACTICAL NOTES:
+- Gathering increases food, metal, or knowledge (depends on your territories)
+- Attacking costs metal but can capture territory and damage enemy HP
+- Defending restores HP — use when low
+- If food < 20, prioritize gathering to avoid starvation
+- Trading can fill resource gaps without combat risk
+
 Respond with ONLY a JSON object:
 {
   "action": "gather|attack|defend|propose_trade|accept_trade",
