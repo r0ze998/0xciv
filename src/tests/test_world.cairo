@@ -114,4 +114,21 @@ mod tests {
         assert(civ.metal == 50, 'metal should be 50');
         assert(civ.knowledge == 25, 'knowledge should be 25');
     }
+
+    #[test]
+    fn test_set_strategy() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+        actions_system.set_strategy(0x1234);
+
+        let strategy: dojo_starter::models::Strategy = world.read_model(1_u32);
+        assert(strategy.prompt_hash == 0x1234, 'prompt hash mismatch');
+    }
 }
