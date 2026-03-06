@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { fetchAllOnChainData, OnChainCivilization, OnChainTerritory, OnChainGameState } from './torii'
 
 // Types
 type ResourceType = 'food' | 'metal' | 'knowledge'
@@ -41,8 +42,53 @@ const COLORS = [
   { color: '#4ade80', neonClass: 'text-green-400 border-green-400', bg: 'bg-green-900/60', name: 'Jade Federation' },
 ]
 const RESOURCE_ICONS: Record<ResourceType, string> = { food: '🍞', metal: '⚒️', knowledge: '📚' }
+const RESOURCE_MAP: ResourceType[] = ['food', 'metal', 'knowledge']
 
-// Generate initial grid
+// Convert on-chain data to UI models
+function onChainCivToUI(civ: OnChainCivilization, index: number): Civilization {
+  const colorInfo = COLORS[index] || COLORS[0]
+  return {
+    id: index,
+    name: colorInfo.name,
+    color: colorInfo.color,
+    neonClass: colorInfo.neonClass,
+    hp: civ.hp,
+    maxHp: 100,
+    food: civ.food,
+    metal: civ.metal,
+    knowledge: civ.knowledge,
+    territories: civ.territory_count,
+    isAlive: civ.is_alive,
+    prompt: '',
+  }
+}
+
+function onChainTerritoriesToGrid(territories: OnChainTerritory[]): Territory[][] {
+  const grid: Territory[][] = Array.from({ length: GRID_SIZE }, (_, y) =>
+    Array.from({ length: GRID_SIZE }, (_, x) => ({
+      x, y, owner: null, resource: 'food' as ResourceType,
+    }))
+  )
+  for (const t of territories) {
+    if (t.x < GRID_SIZE && t.y < GRID_SIZE) {
+      grid[t.y][t.x] = {
+        x: t.x,
+        y: t.y,
+        owner: t.owner_civ_id > 0 ? t.owner_civ_id - 1 : null, // civ_id is 1-indexed on-chain
+        resource: RESOURCE_MAP[t.resource_type] || 'food',
+      }
+    }
+  }
+  return grid
+}
+
+function gamePhaseToUI(phase: number): Phase {
+  if (phase === 0) return 'lobby'
+  if (phase === 2) return 'ended'
+  return 'playing'
+}
+
+// Generate initial grid (mock fallback)
 function generateGrid(): Territory[][] {
   const resources: ResourceType[] = ['food', 'metal', 'knowledge']
   return Array.from({ length: GRID_SIZE }, (_, y) =>
@@ -54,7 +100,6 @@ function generateGrid(): Territory[][] {
   )
 }
 
-// Generate initial civs
 function generateCivs(): Civilization[] {
   return COLORS.map((c, i) => ({
     id: i,
@@ -79,7 +124,7 @@ function assignStartingTerritories(grid: Territory[][]): Territory[][] {
   return newGrid
 }
 
-// Simulate a turn
+// Simulate a turn (mock fallback)
 function simulateTurn(
   civs: Civilization[],
   grid: Territory[][],
@@ -109,8 +154,7 @@ function simulateTurn(
         const dmg = Math.floor(Math.random() * 20) + 5
         t.hp = Math.max(0, t.hp - dmg)
         c.metal = Math.max(0, c.metal - 5)
-        logs.push({ turn, message: `⚔️ ${c.name} attacked ${t.name} for ${dmg} damage!`, type: 'combat' })
-        // Try to capture a territory
+        logs.push({ turn, message: `${c.name} attacked ${t.name} for ${dmg} damage!`, type: 'combat' })
         if (Math.random() > 0.6) {
           const targetTerritories = newGrid.flat().filter(tt => tt.owner === target.id)
           if (targetTerritories.length > 0) {
@@ -118,30 +162,28 @@ function simulateTurn(
             newGrid[captured.y][captured.x].owner = civ.id
             c.territories++
             t.territories = Math.max(0, t.territories - 1)
-            logs.push({ turn, message: `🏴 ${c.name} captured territory (${captured.x},${captured.y}) from ${t.name}!`, type: 'combat' })
+            logs.push({ turn, message: `${c.name} captured territory (${captured.x},${captured.y}) from ${t.name}!`, type: 'combat' })
           }
         }
       }
     } else if (action === 'defend') {
       c.hp = Math.min(c.maxHp, c.hp + 5)
-      logs.push({ turn, message: `🛡️ ${c.name} fortified defenses (+5 HP)`, type: 'action' })
+      logs.push({ turn, message: `${c.name} fortified defenses (+5 HP)`, type: 'action' })
     } else {
       c.food += 8
       c.knowledge += 3
-      logs.push({ turn, message: `🤝 ${c.name} traded resources (+8 🍞, +3 📚)`, type: 'trade' })
+      logs.push({ turn, message: `${c.name} traded resources (+8 food, +3 knowledge)`, type: 'trade' })
     }
 
-    // Food consumption
     c.food = Math.max(0, c.food - 3)
   })
 
-  // Check elimination
   newCivs.forEach(c => {
     if (!c.isAlive) return
     if (c.hp <= 0 || c.food <= 0 || c.territories <= 0) {
       c.isAlive = false
       const reason = c.hp <= 0 ? 'HP reached 0' : c.food <= 0 ? 'starvation' : 'all territories lost'
-      logs.push({ turn, message: `☠️ ${c.name} has been eliminated! (${reason})`, type: 'elimination' })
+      logs.push({ turn, message: `${c.name} has been eliminated! (${reason})`, type: 'elimination' })
     }
   })
 
@@ -218,7 +260,7 @@ function ResourcePanel({ civ }: { civ: Civilization }) {
     <div className="bg-gray-900/80 rounded-lg border p-4 space-y-3" style={{ borderColor: civ.color }}>
       <div className="flex items-center justify-between">
         <h3 className="font-bold text-lg" style={{ color: civ.color }}>{civ.name}</h3>
-        {!civ.isAlive && <span className="text-red-500 text-xs font-bold">☠️ ELIMINATED</span>}
+        {!civ.isAlive && <span className="text-red-500 text-xs font-bold">ELIMINATED</span>}
       </div>
       <div>
         <div className="flex justify-between text-xs text-gray-400 mb-1">
@@ -246,16 +288,77 @@ export default function App() {
   const [selectedCiv, setSelectedCiv] = useState(0)
   const [prompt, setPrompt] = useState('')
   const [winner, setWinner] = useState<Civilization | null>(null)
+  const [dataSource, setDataSource] = useState<'loading' | 'torii' | 'mock'>('loading')
 
   const playerCiv = civs[selectedCiv]
 
+  // Try to load on-chain data from Torii
+  const syncFromTorii = useCallback(async () => {
+    try {
+      const { gameState, civs: onChainCivs, territories } = await fetchAllOnChainData(1)
+
+      if (!gameState || onChainCivs.length === 0) {
+        if (dataSource === 'loading') {
+          setDataSource('mock')
+          setLogs(prev => [...prev, { turn: 0, message: 'No on-chain game found. Using mock simulation.', type: 'system' }])
+        }
+        return
+      }
+
+      // Convert on-chain data to UI format
+      const uiCivs = onChainCivs
+        .sort((a, b) => a.civ_id - b.civ_id)
+        .map((c, i) => onChainCivToUI(c, i))
+
+      const uiGrid = onChainTerritoriesToGrid(territories)
+      const uiPhase = gamePhaseToUI(gameState.game_phase)
+
+      setCivs(prev => {
+        // Preserve prompts from previous state
+        return uiCivs.map((c, i) => ({ ...c, prompt: prev[i]?.prompt || '' }))
+      })
+      setGrid(uiGrid)
+      setTurn(gameState.turn_number)
+      setPhase(uiPhase)
+
+      if (uiPhase === 'ended') {
+        const alive = uiCivs.find(c => c.isAlive)
+        if (alive) setWinner(alive)
+      }
+
+      if (dataSource !== 'torii') {
+        setDataSource('torii')
+        setLogs(prev => [...prev, { turn: 0, message: 'Connected to Torii. Showing on-chain data.', type: 'system' }])
+      }
+    } catch {
+      if (dataSource === 'loading') {
+        setDataSource('mock')
+        setLogs(prev => [...prev, { turn: 0, message: 'Torii unavailable. Using mock simulation.', type: 'system' }])
+      }
+    }
+  }, [dataSource])
+
+  // Initial load + polling
+  useEffect(() => {
+    syncFromTorii()
+    const interval = setInterval(syncFromTorii, 3000)
+    return () => clearInterval(interval)
+  }, [syncFromTorii])
+
   function startGame() {
     setPhase('playing')
-    setLogs([{ turn: 0, message: '🌅 The world awakens. Four civilizations emerge from the void.', type: 'system' }])
+    setLogs(prev => [...prev, { turn: 0, message: 'The world awakens. Four civilizations emerge from the void.', type: 'system' }])
   }
 
   function nextTurn() {
     if (winner) return
+    if (dataSource === 'torii') {
+      // In Torii mode, just refresh — turns are advanced on-chain
+      syncFromTorii()
+      setLogs(prev => [...prev, { turn, message: 'Syncing on-chain state...', type: 'system' }])
+      return
+    }
+    // Mock simulation fallback
     const newTurn = turn + 1
     const result = simulateTurn(civs, grid, newTurn)
     setCivs(result.civs)
@@ -268,7 +371,7 @@ export default function App() {
       const w = alive[0] || result.civs[0]
       setWinner(w)
       setPhase('ended')
-      setLogs(prev => [...prev, { turn: newTurn, message: `👑 ${w.name} is the last civilization standing!`, type: 'system' }])
+      setLogs(prev => [...prev, { turn: newTurn, message: `${w.name} is the last civilization standing!`, type: 'system' }])
     }
   }
 
@@ -276,7 +379,7 @@ export default function App() {
     const updated = [...civs]
     updated[selectedCiv] = { ...updated[selectedCiv], prompt }
     setCivs(updated)
-    setLogs(prev => [...prev, { turn, message: `📝 ${playerCiv.name} updated their strategy prompt`, type: 'system' }])
+    setLogs(prev => [...prev, { turn, message: `${playerCiv.name} updated their strategy prompt`, type: 'system' }])
   }
 
   // Lobby screen
@@ -300,9 +403,14 @@ export default function App() {
           onClick={startGame}
           className="px-8 py-3 rounded-lg font-bold text-lg bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 transition-all text-white shadow-lg shadow-fuchsia-500/25"
         >
-          ▶ START GAME
+          START GAME
         </button>
-        <p className="text-gray-600 text-sm mt-4">Dojo Game Jam VIII — "Stop fighting bots, design around them"</p>
+        <p className="text-gray-600 text-sm mt-4">
+          {dataSource === 'torii' ? 'Connected to Torii (on-chain)' :
+           dataSource === 'mock' ? 'Mock mode (Torii unavailable)' :
+           'Connecting to Torii...'}
+        </p>
+        <p className="text-gray-700 text-xs mt-1">Dojo Game Jam VIII</p>
       </div>
     )
   }
@@ -318,8 +426,11 @@ export default function App() {
           WebkitTextFillColor: 'transparent',
         }}>0xCIV</h1>
         <div className="flex items-center gap-4">
+          <span className={`text-xs px-2 py-0.5 rounded ${dataSource === 'torii' ? 'bg-green-900 text-green-400' : 'bg-yellow-900 text-yellow-400'}`}>
+            {dataSource === 'torii' ? 'ON-CHAIN' : 'MOCK'}
+          </span>
           <span className="text-gray-500 text-sm">Turn {turn}</span>
-          <span className="text-gray-600 text-sm">Alive: {civs.filter(c => c.isAlive).length}/4</span>
+          <span className="text-gray-600 text-sm">Alive: {civs.filter(c => c.isAlive).length}/{civs.length}</span>
         </div>
       </div>
 
@@ -346,7 +457,7 @@ export default function App() {
 
           {/* Prompt editor */}
           <div className="bg-gray-900/80 rounded-lg border border-gray-700 p-4">
-            <label className="text-gray-400 text-sm block mb-2">⚡ Strategy Prompt — Tell your AI how to lead</label>
+            <label className="text-gray-400 text-sm block mb-2">Strategy Prompt — Tell your AI how to lead</label>
             <textarea
               value={prompt}
               onChange={e => setPrompt(e.target.value)}
@@ -358,14 +469,14 @@ export default function App() {
                 onClick={savePrompt}
                 className="px-4 py-2 rounded text-sm font-bold bg-gray-800 border border-cyan-500 text-cyan-400 hover:bg-cyan-500/10 transition-all"
               >
-                💾 Save Prompt
+                Save Prompt
               </button>
               <button
                 onClick={nextTurn}
                 disabled={!!winner}
                 className="flex-1 py-2 rounded text-sm font-bold bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                ⏭ NEXT TURN
+                {dataSource === 'torii' ? 'SYNC STATE' : 'NEXT TURN'}
               </button>
             </div>
           </div>
@@ -377,7 +488,7 @@ export default function App() {
             {civs.map(c => <ResourcePanel key={c.id} civ={c} />)}
           </div>
           <div>
-            <h3 className="text-gray-500 text-sm mb-2 font-bold">📜 TURN LOG</h3>
+            <h3 className="text-gray-500 text-sm mb-2 font-bold">TURN LOG</h3>
             <TurnLog logs={logs} />
           </div>
         </div>
@@ -388,13 +499,13 @@ export default function App() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
           <div className="text-center p-8 rounded-2xl border-2" style={{ borderColor: winner.color, boxShadow: `0 0 60px ${winner.color}44` }}>
             <p className="text-gray-400 text-sm mb-2">GAME OVER</p>
-            <h2 className="text-4xl font-black mb-2" style={{ color: winner.color }}>👑 {winner.name}</h2>
+            <h2 className="text-4xl font-black mb-2" style={{ color: winner.color }}>{winner.name}</h2>
             <p className="text-gray-400 mb-6">Last Civilization Standing — Turn {turn}</p>
             <button
               onClick={() => window.location.reload()}
               className="px-6 py-3 rounded-lg font-bold bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white"
             >
-              🔄 Play Again
+              Play Again
             </button>
           </div>
         </div>
