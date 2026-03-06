@@ -293,11 +293,23 @@ function ResourcePanel({ civ }: { civ: Civilization }) {
         </div>
         <HPBar hp={civ.hp} maxHp={civ.maxHp} color={civ.color} />
       </div>
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <div className="flex items-center gap-1"><span>🍞</span><span className="text-gray-300">{civ.food}</span></div>
-        <div className="flex items-center gap-1"><span>⚒️</span><span className="text-gray-300">{civ.metal}</span></div>
-        <div className="flex items-center gap-1"><span>📚</span><span className="text-gray-300">{civ.knowledge}</span></div>
-        <div className="flex items-center gap-1"><span>🏴</span><span className="text-gray-300">{civ.territories}</span></div>
+      <div className="space-y-1 text-sm">
+        {([['🍞', 'food', civ.food, true], ['⚒️', 'metal', civ.metal, false], ['📚', 'knowledge', civ.knowledge, false]] as const).map(([icon, , val, fatal]) => (
+          <div key={icon} className="flex items-center gap-2">
+            <span className="w-5 text-center">{icon}</span>
+            <div className="flex-1 bg-gray-800 rounded-full h-2">
+              <div className="h-full rounded-full transition-all duration-500" style={{
+                width: `${Math.min(100, (val as number) / 2)}%`,
+                backgroundColor: fatal && (val as number) < 20 ? '#ef4444' : civ.color,
+              }} />
+            </div>
+            <span className={`text-xs w-8 text-right ${fatal && (val as number) < 20 ? 'text-red-400 font-bold' : 'text-gray-400'}`}>{val as number}</span>
+          </div>
+        ))}
+        <div className="flex items-center gap-2">
+          <span className="w-5 text-center">🏴</span>
+          <span className="text-gray-300 text-xs">{civ.territories} territories</span>
+        </div>
       </div>
     </div>
   )
