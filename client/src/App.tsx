@@ -260,22 +260,25 @@ function TurnLog({ logs }: { logs: LogEntry[] }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => { ref.current?.scrollTo(0, ref.current.scrollHeight) }, [logs])
 
-  const typeColor: Record<string, string> = {
-    action: 'text-gray-300',
-    combat: 'text-red-400',
-    trade: 'text-blue-400',
-    elimination: 'text-yellow-400',
-    system: 'text-purple-400',
+  const typeStyle: Record<string, { color: string; icon: string }> = {
+    action: { color: 'text-gray-300', icon: '⚡' },
+    combat: { color: 'text-red-400', icon: '⚔️' },
+    trade: { color: 'text-blue-400', icon: '🤝' },
+    elimination: { color: 'text-yellow-400', icon: '☠️' },
+    system: { color: 'text-purple-400', icon: '📡' },
   }
 
   return (
     <div ref={ref} className="h-64 overflow-y-auto bg-gray-900/80 rounded-lg border border-gray-700 p-3 font-mono text-xs space-y-1">
       {logs.length === 0 && <p className="text-gray-600 italic">Waiting for first turn...</p>}
-      {logs.map((log, i) => (
-        <div key={i} className={typeColor[log.type] || 'text-gray-400'}>
-          <span className="text-gray-600">[T{log.turn}]</span> {log.message}
-        </div>
-      ))}
+      {logs.map((log, i) => {
+        const s = typeStyle[log.type] || { color: 'text-gray-400', icon: '•' }
+        return (
+          <div key={i} className={s.color}>
+            <span className="text-gray-600">[T{log.turn}]</span> {s.icon} {log.message}
+          </div>
+        )
+      })}
     </div>
   )
 }
