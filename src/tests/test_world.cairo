@@ -95,4 +95,23 @@ mod tests {
         assert(civ.hp > 0, 'hp should be > 0');
         assert(civ.food > 0, 'food should be > 0');
     }
+
+    #[test]
+    fn test_initial_resources() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+
+        let civ: dojo_starter::models::Civilization = world.read_model(1_u32);
+        assert(civ.hp == 100, 'hp should be 100');
+        assert(civ.food == 100, 'food should be 100');
+        assert(civ.metal == 50, 'metal should be 50');
+        assert(civ.knowledge == 25, 'knowledge should be 25');
+    }
 }
