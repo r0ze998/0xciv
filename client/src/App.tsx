@@ -398,6 +398,18 @@ export default function App() {
     return () => clearInterval(interval)
   }, [syncFromTorii])
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (phase !== 'playing' || winner) return
+      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return
+      if (e.key === 'n' || e.key === 'N') nextTurn()
+      if (e.key >= '1' && e.key <= '4') setSelectedCiv(parseInt(e.key) - 1)
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  })
+
   function startGame() {
     setPhase('playing')
     setLogs(prev => [...prev, { turn: 0, message: 'The world awakens. Four civilizations emerge from the void.', type: 'system' }])
