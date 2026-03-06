@@ -71,7 +71,7 @@ export async function fetchGameState(gameId: number): Promise<OnChainGameState |
   }
 }
 
-export async function fetchCivilizations(gameId: number): Promise<OnChainCivilization[]> {
+export async function fetchCivilizations(_gameId?: number): Promise<OnChainCivilization[]> {
   // Civs don't have game_id key, they use civ_id. Fetch all civs up to 4.
   const data = await query(`{
     dojoStarterCivilizationModels(limit: 10) {
@@ -93,7 +93,7 @@ export async function fetchCivilizations(gameId: number): Promise<OnChainCiviliz
   }))
 }
 
-export async function fetchTerritories(): Promise<OnChainTerritory[]> {
+export async function fetchTerritories(_gameId?: number): Promise<OnChainTerritory[]> {
   const data = await query(`{
     dojoStarterTerritoryModels(limit: 30) {
       edges { node {

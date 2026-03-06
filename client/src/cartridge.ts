@@ -1,5 +1,5 @@
 // Cartridge Controller integration
-import ControllerConnector from '@cartridge/connector'
+import { ControllerConnector } from '@cartridge/connector'
 
 // Contract address from deployment
 const ACTIONS_CONTRACT = import.meta.env.VITE_ACTIONS_CONTRACT || '0x0'

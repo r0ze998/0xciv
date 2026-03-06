@@ -8,9 +8,9 @@
 - [ ] A5: Create submission PR to dojoengine/game-jams repo
 
 ## Priority B: Nice-to-have
-- [ ] B1: Frontend loading states and error messages
-- [ ] B2: Add advance_turn script/button integration
-- [ ] B3: Multi-agent mode (run 4 agents simultaneously with different prompts)
+- [x] B1: Frontend loading states and error messages
+- [x] B2: Add advance_turn script/button integration
+- [x] B3: Multi-agent mode (run 4 agents simultaneously with different prompts)
 - [ ] B4: Better turn log display with real on-chain events
 
 ## Priority C: If time allows

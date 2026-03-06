@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { fetchAllOnChainData, OnChainCivilization, OnChainTerritory, OnChainGameState } from './torii'
+import { fetchAllOnChainData } from './torii'
+import type { OnChainCivilization, OnChainTerritory } from './torii'
 import { connectWallet, disconnectWallet } from './cartridge'
-import { executeAdvanceTurn, executeSetStrategy } from './actions'
 
 // Types
 type ResourceType = 'food' | 'metal' | 'knowledge'
@@ -453,7 +453,7 @@ export default function App() {
               } else {
                 try {
                   const acct = await connectWallet()
-                  if (acct?.address) setWalletAddress(acct.address)
+                  if (acct?.account) setWalletAddress(acct.account)
                 } catch {}
               }
             }}
