@@ -41,7 +41,7 @@ Your civilization is eliminated if **any** of these happen:
 | Layer | Technology |
 |-------|-----------|
 | On-chain | **Dojo Engine** (Cairo) on Starknet |
-| AI Agent | **Daydreams** Framework |
+| AI Agent | **Claude AI** (Anthropic) |
 | Indexer | **Torii** (GraphQL) |
 | Devnet | **Katana** |
 | Frontend | React + @dojoengine/sdk + Tailwind CSS |
@@ -53,23 +53,53 @@ Your civilization is eliminated if **any** of these happen:
 - [Dojo](https://book.dojoengine.org/) (sozo, katana, torii)
 - Node.js 18+
 
-### Contracts
+### 1. Contracts
 
 ```bash
-# Build
+# Build & test
 sozo build
-
-# Run tests
 sozo test
+```
 
-# Start local devnet
-katana --disable-fee --allowed-origins "*"
+### 2. Start Local Devnet
 
-# Deploy
+```bash
+# Terminal 1: Katana
+katana --dev --dev.no-fee --http.cors_origins "*"
+
+# Terminal 2: Deploy contracts
 sozo migrate
 
-# Start indexer
-torii --world <WORLD_ADDRESS> --allowed-origins "*"
+# Terminal 3: Torii indexer (use world address from migrate output)
+torii --world 0x<WORLD_ADDRESS> --http.cors_origins "*"
+```
+
+### 3. Create a Game
+
+```bash
+# Setup 4 civilizations
+bash scripts/setup_game.sh
+```
+
+### 4. Frontend
+
+```bash
+cd client
+npm install
+npm run dev
+# Open http://localhost:5173
+```
+
+### 5. Run AI Agent
+
+```bash
+cd agent
+npm install
+export ANTHROPIC_API_KEY=your-key
+export GAME_ID=1
+export CIV_ID=1
+export PLAYER_PROMPT="Gather resources. Trade when possible. Attack only if threatened."
+npx ts-node src/index.ts
 ```
 
 ## 🏛️ Architecture
