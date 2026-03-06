@@ -11,8 +11,8 @@ https://github.com/r0ze998/0xciv
 ### Live Demo
 > Not yet deployed to Slot/Sepolia.
 
-### Gameplay Video
-> TBD
+### Gameplay Screenshot
+![0xCIV](../assets/demo-screenshot.png)
 
 ### How to Play
 1. Start local devnet: `katana --dev --dev.no-fee`
