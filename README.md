@@ -123,30 +123,6 @@ export PLAYER_PROMPT="Gather resources. Trade when possible. Attack only if thre
 npx ts-node src/index.ts
 ```
 
-## 🏛️ Architecture
-
-```
-┌──────────────┐
-│   Frontend   │ ← Player writes prompts, views map
-│   (React)    │
-└──────┬───────┘
-       │ GraphQL
-┌──────┴───────┐
-│    Torii     │ ← Indexes on-chain state
-└──────┬───────┘
-       │
-┌──────┴───────┐     ┌──────────────┐
-│   Katana     │ ←── │  Daydreams   │
-│  (Starknet)  │     │  (AI Agent)  │
-│              │     │              │
-│  Models:     │     │ Reads state  │
-│  Civilization│     │ via Torii    │
-│  Territory   │     │ Decides next │
-│  GameState   │     │ action from  │
-│  Trade       │     │ player prompt│
-└──────────────┘     └──────────────┘
-```
-
 ## 📄 Game Design
 
 See [GAME_DESIGN_v2.md](./GAME_DESIGN_v2.md) for the full specification.

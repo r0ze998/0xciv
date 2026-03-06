@@ -13,8 +13,8 @@ https://github.com/r0ze998/0xciv
 ### Live Demo
 > Not yet deployed to Slot.
 
-### Gameplay Video
-> TBD
+### Gameplay Screenshot
+![0xCIV Gameplay](../assets/demo-screenshot.png)
 
 ### How to Play
 1. Connect wallet via Cartridge Controller
