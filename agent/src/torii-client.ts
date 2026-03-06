@@ -11,15 +11,22 @@ function parseNum(v: any): number {
 }
 
 async function query(q: string): Promise<any> {
-  const res = await fetch(TORII_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: q }),
-  })
-  if (!res.ok) throw new Error(`Torii query failed: ${res.status}`)
-  const data: any = await res.json()
-  if (data.errors) throw new Error(`Torii errors: ${JSON.stringify(data.errors)}`)
-  return data.data
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 10000)
+  try {
+    const res = await fetch(TORII_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: q }),
+      signal: controller.signal,
+    })
+    if (!res.ok) throw new Error(`Torii query failed: ${res.status}`)
+    const data: any = await res.json()
+    if (data.errors) throw new Error(`Torii errors: ${JSON.stringify(data.errors)}`)
+    return data.data
+  } finally {
+    clearTimeout(timeout)
+  }
 }
 
 export async function getGameState(gameId: number): Promise<GameState> {

@@ -84,15 +84,19 @@ async function runOneTurn(): Promise<boolean> {
   return true
 }
 
+let running = true
+process.on('SIGINT', () => { console.log('\n⏹ Graceful shutdown...'); running = false })
+process.on('SIGTERM', () => { console.log('\n⏹ Terminated'); running = false })
+
 async function main() {
   console.log(`🤖 0xCIV Agent Loop — Game ${GAME_ID}, Civ ${CIV_ID}`)
   console.log(`Strategy: "${process.env.PLAYER_PROMPT || 'default'}"`)
   console.log(`Max turns: ${MAX_TURNS}, delay: ${TURN_DELAY_MS}ms\n`)
 
-  for (let i = 0; i < MAX_TURNS; i++) {
+  for (let i = 0; i < MAX_TURNS && running; i++) {
     const keepGoing = await runOneTurn()
     if (!keepGoing) break
-    await new Promise(r => setTimeout(r, TURN_DELAY_MS))
+    if (running) await new Promise(r => setTimeout(r, TURN_DELAY_MS))
   }
 
   console.log('\n🏁 Agent loop finished.')
