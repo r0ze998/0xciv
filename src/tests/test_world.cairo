@@ -60,4 +60,39 @@ mod tests {
         assert(game.civ_count == 0, 'civ_count should be 0');
         assert(game.alive_count == 0, 'alive_count should be 0');
     }
+
+    #[test]
+    fn test_spawn_civilization() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+
+        let game: GameState = world.read_model(1_u32);
+        assert(game.civ_count == 1, 'civ_count should be 1');
+        assert(game.alive_count == 1, 'alive_count should be 1');
+    }
+
+    #[test]
+    fn test_spawn_sets_civ_alive() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+
+        let civ: dojo_starter::models::Civilization = world.read_model(1_u32);
+        assert(civ.is_alive, 'civ should be alive');
+        assert(civ.hp > 0, 'hp should be > 0');
+        assert(civ.food > 0, 'food should be > 0');
+    }
 }

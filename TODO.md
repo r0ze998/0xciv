@@ -11,7 +11,7 @@
 - [x] B1: Frontend loading states and error messages
 - [x] B2: Add advance_turn script/button integration
 - [x] B3: Multi-agent mode (run 4 agents simultaneously with different prompts)
-- [ ] B4: Better turn log display with real on-chain events
+- [x] B4: Better turn log display with real on-chain events
 
 ## Priority C: If time allows
 - [ ] C1: Update Manus slides with 0xCIV name
