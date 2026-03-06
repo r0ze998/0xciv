@@ -30,10 +30,26 @@ npx ts-node src/index.ts
 1. Reads game state from Torii GraphQL (civilizations, territories, trades)
 2. Sends game state + player's strategy prompt to Claude
 3. Claude decides one action: gather / attack / defend / propose_trade / accept_trade
-4. Outputs the action as JSON (to be executed on-chain via Dojo SDK)
+4. Executes the action on-chain via starknet.js (with retry logic)
+
+## Game Loop Mode
+
+Run multiple turns automatically:
+
+```bash
+MAX_TURNS=20 TURN_DELAY_MS=5000 npm run loop
+```
+
+## Multi-Agent Battle
+
+Run 4 civilizations simultaneously:
+
+```bash
+bash ../scripts/run_all_agents.sh
+```
 
 ## Architecture
 
 ```
-Player Prompt → Agent → Torii (read state) → Claude (decide) → Dojo (execute)
+Player Prompt → Agent → Torii (read state) → Claude (decide) → starknet.js (execute on-chain)
 ```
