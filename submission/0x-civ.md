@@ -22,7 +22,8 @@ https://github.com/r0ze998/0xciv
 
 ## Live Demo
 
-> Pending Slot deployment (requires `slot auth login`)
+https://api.cartridge.gg/x/0xciv/katana (Katana RPC)
+https://api.cartridge.gg/x/0xciv/torii/graphql (Torii GraphQL)
 
 ## Gameplay Video
 

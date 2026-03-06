@@ -3,7 +3,7 @@
     "class_hash": "0x613551abceb2b37073b1149bb862ea70cf029981ce1ca47e9dd7c7ab97cb65d",
     "address": "0x26d5777eccca1861a23303ee0ba48c0e8349e849d0377a21c3801ef1d0f8cef",
     "seed": "dojo_starter",
-    "name": "Dojo starter",
+    "name": "0xCIV",
     "entrypoints": [
       "uuid",
       "set_metadata",
