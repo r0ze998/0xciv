@@ -285,10 +285,10 @@ function TurnLog({ logs }: { logs: LogEntry[] }) {
 
 function ResourcePanel({ civ }: { civ: Civilization }) {
   return (
-    <div className="bg-gray-900/80 rounded-lg border p-4 space-y-3" style={{ borderColor: civ.color }}>
+    <div className={`bg-gray-900/80 rounded-lg border p-4 space-y-3 ${!civ.isAlive ? 'opacity-40' : ''}`} style={{ borderColor: civ.isAlive ? civ.color : '#4b5563' }}>
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-lg" style={{ color: civ.color }}>{civ.name}</h3>
-        {!civ.isAlive && <span className="text-red-500 text-xs font-bold">ELIMINATED</span>}
+        <h3 className="font-bold text-lg" style={{ color: civ.isAlive ? civ.color : '#6b7280' }}>{civ.name}</h3>
+        {!civ.isAlive && <span className="text-red-500 text-xs font-bold animate-pulse">☠️ ELIMINATED</span>}
       </div>
       <div>
         <div className="flex justify-between text-xs text-gray-400 mb-1">
