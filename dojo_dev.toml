@@ -1,16 +1,11 @@
 [world]
-name = "Dojo starter"
-description = "The official Dojo Starter guide, the quickest and most streamlined way to get your Dojo Autonomous World up and running. This guide will assist you with the initial setup, from cloning the repository to deploying your world."
-cover_uri = "file://assets/cover.png"
-icon_uri = "file://assets/icon.png"
-website = "https://github.com/dojoengine/dojo-starter"
+name = "0xCIV"
+description = "AI civilization strategy game. Command civilizations with natural language prompts. Last standing wins."
 seed = "dojo_starter"
 
 [world.socials]
-x = "https://x.com/ohayo_dojo"
-discord = "https://discord.gg/FB2wR6uF"
-github = "https://github.com/dojoengine/dojo-starter"
-telegram = "https://t.me/dojoengine"
+x = "https://x.com/r0ze_____"
+github = "https://github.com/r0ze998/0xciv"
 
 [namespace]
 default = "dojo_starter"

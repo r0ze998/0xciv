@@ -1,0 +1,20 @@
+[world]
+name = "0xCIV"
+description = "AI civilization strategy game. Command civilizations with natural language prompts."
+seed = "dojo_starter"
+
+[world.socials]
+x = "https://x.com/r0ze_____"
+github = "https://github.com/r0ze998/0xciv"
+
+[namespace]
+default = "dojo_starter"
+
+[env]
+# Slot deployment — will be filled after `slot deployments create`
+# rpc_url = "https://api.cartridge.gg/x/0xciv/katana"
+# account_address = ""
+# private_key = ""
+
+[writers]
+"dojo_starter" = ["dojo_starter-actions"]
