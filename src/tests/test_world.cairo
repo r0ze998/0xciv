@@ -235,4 +235,36 @@ mod tests {
         // At least one HP changed from 100
         assert(civ1.hp < 100 || civ2.hp < 100, 'someone should take damage');
     }
+
+    #[test]
+    fn test_propose_trade() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x1234>());
+        actions_system.spawn_civilization();
+
+        // Civ 1 proposes trade to civ 2
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x0>());
+        actions_system.propose_trade(
+            2,
+            dojo_starter::models::ResourceType::Food,
+            10,
+            dojo_starter::models::ResourceType::Metal,
+            5,
+        );
+
+        let trade: dojo_starter::models::TradeProposal = world.read_model(0_u32);
+        assert(trade.from_civ == 1, 'from should be civ 1');
+        assert(trade.to_civ == 2, 'to should be civ 2');
+        assert(trade.offer_amount == 10, 'offer should be 10');
+        assert(trade.request_amount == 5, 'request should be 5');
+    }
 }
