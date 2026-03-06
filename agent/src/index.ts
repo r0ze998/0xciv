@@ -1,4 +1,4 @@
-// 0xCIV Daydreams Agent — AI civilization decision-making
+// 0xCIV AI Agent — Claude-powered civilization decision-making
 // Reads game state from Torii, uses LLM to decide actions based on player prompt
 
 import { AgentAction, AgentContext } from './types'

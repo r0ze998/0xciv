@@ -10,7 +10,7 @@ pub trait IActions<T> {
     fn spawn_civilization(ref self: T);
     fn set_strategy(ref self: T, prompt_hash: felt252);
 
-    // Agent actions (called by Daydreams agents or players)
+    // Agent actions (called by AI agents or players)
     fn gather(ref self: T);
     fn propose_trade(
         ref self: T,
