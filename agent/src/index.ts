@@ -3,6 +3,7 @@
 
 import { AgentAction, AgentContext } from './types'
 import { getGameState, getCivilizations, getTerritories, getActiveTrades } from './torii-client'
+import { executeAction } from './executor'
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 const GAME_ID = parseInt(process.env.GAME_ID || '1')
@@ -154,8 +155,9 @@ async function main() {
     console.log('\n📤 Action to execute on-chain:')
     console.log(JSON.stringify(action, null, 2))
 
-    // TODO: Execute on-chain via starknet.js / Dojo SDK
-    // For now, just output the decision
+    // Execute on-chain
+    const txHash = await executeAction(CIV_ID, action)
+    console.log(`\n✅ Transaction submitted: ${txHash}`)
   } catch (err) {
     console.error('❌ Agent error:', err)
     process.exit(1)

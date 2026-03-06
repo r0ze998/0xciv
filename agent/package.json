@@ -12,6 +12,7 @@
   "type": "commonjs",
   "dependencies": {
     "@types/node": "^25.3.5",
+    "starknet": "^9.4.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }
