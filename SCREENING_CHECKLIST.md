@@ -5,7 +5,7 @@
 - [x] Dojo models with proper annotations (#[dojo::model], #[dojo::event])
 - [x] Dojo systems (IActionsDispatcher, world storage)
 - [x] sozo build passes
-- [x] sozo test passes (3 tests)
+- [x] sozo test passes (9 tests)
 - [x] Frontend uses @dojoengine/sdk
 - [x] Cartridge Controller integration (@cartridge/controller + @cartridge/connector)
 - [ ] Deployed to Slot OR Sepolia (needs r0ze auth: `slot auth login`)
