@@ -84,6 +84,35 @@ export function assignStartingTerritories(grid: Territory[][]): Territory[][] {
   return newGrid
 }
 
+function chooseAction(civ: Civilization, civs: Civilization[]): string {
+  const prompt = civ.prompt.toLowerCase()
+  const alive = civs.filter(c => c.isAlive && c.id !== civ.id)
+
+  // Prompt-based strategy hints
+  if (prompt) {
+    if (prompt.includes('aggro') || prompt.includes('attack')) {
+      return Math.random() > 0.2 ? 'attack' : 'gather'
+    }
+    if (prompt.includes('turtle') || prompt.includes('defend')) {
+      return Math.random() > 0.3 ? 'defend' : 'gather'
+    }
+    if (prompt.includes('econ') || prompt.includes('gather') || prompt.includes('resource')) {
+      return Math.random() > 0.2 ? 'gather' : 'trade'
+    }
+    if (prompt.includes('chaos') || prompt.includes('random')) {
+      return ['gather', 'attack', 'defend', 'trade'][Math.floor(Math.random() * 4)]
+    }
+  }
+
+  // Smart defaults based on state
+  if (civ.hp < 30) return Math.random() > 0.3 ? 'defend' : 'gather'
+  if (civ.food < 15) return 'gather'
+  if (civ.territories >= 8 && alive.length > 1) return Math.random() > 0.5 ? 'defend' : 'attack'
+  if (civ.metal > 60 && alive.length > 1) return 'attack'
+
+  return ['gather', 'attack', 'defend', 'trade'][Math.floor(Math.random() * 4)]
+}
+
 export function simulateTurn(
   civs: Civilization[],
   grid: Territory[][],
@@ -92,11 +121,10 @@ export function simulateTurn(
   const newCivs = civs.map(c => ({ ...c }))
   const newGrid = grid.map(row => row.map(t => ({ ...t })))
   const logs: LogEntry[] = []
-  const actions = ['gather', 'attack', 'defend', 'trade']
   const alive = newCivs.filter(c => c.isAlive)
 
   alive.forEach(civ => {
-    const action = actions[Math.floor(Math.random() * actions.length)]
+    const action = chooseAction(civ, newCivs)
     const c = newCivs[civ.id]
 
     if (action === 'gather') {
