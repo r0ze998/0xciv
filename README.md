@@ -23,6 +23,22 @@ Same game state + different prompt = different outcome. **The game IS prompt eng
 4. **Watch** the results, edit your prompt anytime
 5. **Survive** — last civilization standing wins
 
+Or hit **👁️ SPECTATE** to watch 4 AI civilizations battle with preset strategies!
+
+## ✨ Features
+
+- **Prompt-driven AI** — Strategy prompts influence civilization behavior
+- **Auto-play mode** — Watch the simulation unfold at adjustable speed
+- **Spectator mode** — One-click to watch AI vs AI battles
+- **HP Timeline** — SVG line chart tracking health over turns
+- **Territory Control** — Stacked bar visualization of map control
+- **Event Toasts** — Floating notifications for combat, trades, eliminations
+- **Combat Shake** — Screen shake on attacks for visceral feedback
+- **Animated Grid** — Territory capture flash, hover tooltips, adjacency hints
+- **Resource Deltas** — See +/- changes each turn with color coding
+- **Sound Effects** — Web Audio API chiptune SFX with mute toggle
+- **Keyboard Shortcuts** — N: next turn, 1-4: select civ, A: auto-play
+
 ## ☠️ Elimination Conditions
 
 Your civilization is eliminated if **any** of these happen:
@@ -46,7 +62,8 @@ Your civilization is eliminated if **any** of these happen:
 | AI Agent | **Claude AI** (Anthropic) |
 | Indexer | **Torii** (GraphQL) |
 | Devnet | **Katana** |
-| Frontend | React + @dojoengine/sdk + Tailwind CSS |
+| Frontend | React + Vite + Tailwind CSS |
+| Hosting | **Slot** (Cartridge) |
 
 ## 🏛️ Architecture
 
@@ -79,7 +96,7 @@ Your civilization is eliminated if **any** of these happen:
 ```bash
 # Build & test
 sozo build
-sozo test
+sozo test    # 12/12 tests
 ```
 
 ### 2. Start Local Devnet
@@ -123,14 +140,21 @@ export PLAYER_PROMPT="Gather resources. Trade when possible. Attack only if thre
 npx ts-node src/index.ts
 ```
 
+## 🎯 Slot Deployment
+
+```bash
+slot deployments create 0xciv katana --version v1.2.5
+slot deployments create 0xciv torii --version v1.2.5 --world 0x<WORLD_ADDRESS>
+```
+
 ## 📄 Game Design
 
-See [GAME_DESIGN_v2.md](./GAME_DESIGN_v2.md) for the full specification.
+See [docs/product-specs/game-design.md](./docs/product-specs/game-design.md) for the full specification.
 
 ## 👥 Team
 
 - **r0ze** ([@r0ze_____](https://x.com/r0ze_____)) — Game Design & Direction
-- **neo** — AI Engineering & Development
+- **neo** ⚡ — AI Engineering & Development
 
 ## 📜 License
 
