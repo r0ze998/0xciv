@@ -25,19 +25,41 @@ Same game state + different prompt = different outcome. **The game IS prompt eng
 
 Or hit **👁️ SPECTATE** to watch 4 AI civilizations battle with preset strategies!
 
+## 🌐 Play Now
+
+**👉 [r0ze998.github.io/0xciv](https://r0ze998.github.io/0xciv/)**
+
 ## ✨ Features
 
+### Gameplay
 - **Prompt-driven AI** — Strategy prompts influence civilization behavior
-- **Auto-play mode** — Watch the simulation unfold at adjustable speed
-- **Spectator mode** — One-click to watch AI vs AI battles
+- **Custom civilization names** — Click to rename, or use name packs (Classic, Warriors, 日本, Sci-Fi)
+- **Difficulty settings** — Casual / Standard / Hardcore
+- **Random events** — Famine, bounty, plague, renaissance every N turns
+- **Knowledge matters** — Improves defense, healing, and trade rates
+- **Smart AI targeting** — "Attack the weakest" in prompt → actually targets lowest HP
+
+### Visualization
 - **HP Timeline** — SVG line chart tracking health over turns
 - **Territory Control** — Stacked bar visualization of map control
-- **Event Toasts** — Floating notifications for combat, trades, eliminations
-- **Combat Shake** — Screen shake on attacks for visceral feedback
+- **Threat Matrix** — Diplomacy panel showing who might attack who
+- **Danger Indicators** — Pulsing warnings on resource panels
+- **Prompt Hints** — Contextual strategy suggestions
+- **Particle Effects** — Emoji particles on combat, gathering, elimination
+- **Combat Shake** — Screen shake on attacks
 - **Animated Grid** — Territory capture flash, hover tooltips, adjacency hints
 - **Resource Deltas** — See +/- changes each turn with color coding
+- **Event Toasts** — Floating notifications for important events
+
+### Modes & Controls
+- **Auto-play mode** — Watch at adjustable speed (Fast/Normal/Slow)
+- **Spectator mode** — One-click AI vs AI battles
+- **Replay system** — Scrub through game history after game over
+- **Leaderboard** — Local win/loss tracking with stats
+- **Share Card** — Generate & download result image for Twitter/X
+- **On-chain actions** — Direct contract calls via Cartridge Controller
 - **Sound Effects** — Web Audio API chiptune SFX with mute toggle
-- **Keyboard Shortcuts** — N: next turn, 1-4: select civ, A: auto-play
+- **Keyboard Shortcuts** — N: next, 1-4: civ, A: auto-play, M: mute
 
 ## ☠️ Elimination Conditions
 
