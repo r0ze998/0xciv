@@ -28,3 +28,13 @@ export interface LogEntry {
   message: string
   type: 'action' | 'combat' | 'trade' | 'elimination' | 'system'
 }
+
+export interface GameStats {
+  totalTurns: number
+  combatEvents: number
+  tradeEvents: number
+  eliminationOrder: { name: string; color: string; turn: number }[]
+  peakHP: { name: string; color: string; hp: number; turn: number }
+  peakTerritories: { name: string; color: string; count: number; turn: number }
+  totalGathered: Record<number, { food: number; metal: number; knowledge: number }>
+}

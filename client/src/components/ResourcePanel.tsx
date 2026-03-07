@@ -28,11 +28,11 @@ export function ResourcePanel({ civ }: { civ: Civilization }) {
   }, [civ.hp, prev, civ.isAlive])
 
   return (
-    <div className={`bg-gray-900/80 rounded-lg border p-4 space-y-3 transition-all ${!civ.isAlive ? 'opacity-40' : ''} ${flash ? 'animate-elimination' : ''}`}
+    <div className={`bg-gray-900/80 rounded-lg border p-2.5 sm:p-4 space-y-2 sm:space-y-3 transition-all ${!civ.isAlive ? 'opacity-40' : ''} ${flash ? 'animate-elimination' : ''}`}
       style={{ borderColor: civ.isAlive ? civ.color : '#4b5563' }}
     >
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-lg" style={{ color: civ.isAlive ? civ.color : '#6b7280' }}>{civ.name}</h3>
+        <h3 className="font-bold text-sm sm:text-lg truncate" style={{ color: civ.isAlive ? civ.color : '#6b7280' }}>{civ.name}</h3>
         {!civ.isAlive && <span className="text-red-500 text-xs font-bold animate-pulse">☠️ ELIMINATED</span>}
       </div>
       <div>

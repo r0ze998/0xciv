@@ -9,7 +9,7 @@ import { TurnTimeline } from './components/TurnTimeline'
 import type { TurnSnapshot } from './components/TurnTimeline'
 import { PRESET_STRATEGIES } from './lib/constants'
 import { onChainCivToUI, onChainTerritoriesToGrid, gamePhaseToUI, generateGrid, generateCivs, assignStartingTerritories, simulateTurn } from './lib/game-utils'
-import type { Civilization, Territory, Phase, LogEntry } from './types/game'
+import type { Civilization, Territory, Phase, LogEntry, GameStats } from './types/game'
 
 export default function App() {
   const [phase, setPhase] = useState<Phase>('lobby')
@@ -26,6 +26,12 @@ export default function App() {
   const [autoSpeed, setAutoSpeed] = useState(1500)
   const [combatShake, setCombatShake] = useState(false)
   const [history, setHistory] = useState<TurnSnapshot[]>([])
+  const [gameStats, setGameStats] = useState<GameStats>({
+    totalTurns: 0, combatEvents: 0, tradeEvents: 0, eliminationOrder: [],
+    peakHP: { name: '', color: '', hp: 0, turn: 0 },
+    peakTerritories: { name: '', color: '', count: 0, turn: 0 },
+    totalGathered: {},
+  })
   const sound = useSound()
 
   const playerCiv = civs[selectedCiv]
@@ -146,6 +152,26 @@ export default function App() {
     setGrid(result.grid)
     setLogs(prev => [...prev, ...result.logs])
     setTurn(newTurn)
+
+    // Track stats
+    setGameStats(prev => {
+      const s = { ...prev, totalTurns: newTurn }
+      for (const log of result.logs) {
+        if (log.type === 'combat') s.combatEvents++
+        if (log.type === 'trade') s.tradeEvents++
+        if (log.type === 'elimination') {
+          const name = log.message.match(/(.+?) has been/)?.[1] || 'Unknown'
+          const civ = result.civs.find(c => c.name === name)
+          s.eliminationOrder = [...s.eliminationOrder, { name, color: civ?.color || '#888', turn: newTurn }]
+        }
+      }
+      for (const c of result.civs) {
+        if (c.hp > s.peakHP.hp) s.peakHP = { name: c.name, color: c.color, hp: c.hp, turn: newTurn }
+        if (c.territories > s.peakTerritories.count) s.peakTerritories = { name: c.name, color: c.color, count: c.territories, turn: newTurn }
+      }
+      return s
+    })
+
     sound.play(sfxTurn)
     for (const log of result.logs) {
       if (log.type === 'combat') {
@@ -186,21 +212,21 @@ export default function App() {
       <EventToast logs={logs} />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-800">
-        <h1 className="text-xl sm:text-2xl font-black tracking-wider" style={{
+      <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3 border-b border-gray-800">
+        <h1 className="text-lg sm:text-2xl font-black tracking-wider shrink-0" style={{
           background: 'linear-gradient(135deg, #00ffff, #ff00ff)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
         }}>0xCIV</h1>
-        <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
-          <MiniStats civs={civs} turn={turn} />
-          <span className={`text-xs px-2 py-0.5 rounded ${dataSource === 'torii' ? 'bg-green-900 text-green-400' : 'bg-yellow-900 text-yellow-400'}`}>
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap justify-end">
+          <span className="hidden sm:flex"><MiniStats civs={civs} turn={turn} /></span>
+          <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded ${dataSource === 'torii' ? 'bg-green-900 text-green-400' : 'bg-yellow-900 text-yellow-400'}`}>
             {dataSource === 'torii' ? 'ON-CHAIN' : 'MOCK'}
           </span>
-          <span className="text-cyan-400 text-sm font-mono font-bold">T{turn}</span>
+          <span className="text-cyan-400 text-xs sm:text-sm font-mono font-bold">T{turn}</span>
           <button
             onClick={sound.toggle}
-            className="px-2 py-1 rounded text-xs border border-gray-700 text-gray-400 hover:border-gray-500 transition-all"
+            className="p-1 sm:px-2 sm:py-1 rounded text-xs border border-gray-700 text-gray-400 hover:border-gray-500 transition-all"
             title={sound.muted ? 'Unmute' : 'Mute'}
           >
             {sound.muted ? '🔇' : '🔊'}
@@ -217,14 +243,14 @@ export default function App() {
                 } catch {}
               }
             }}
-            className="px-3 py-1 rounded text-xs font-bold border border-fuchsia-500 text-fuchsia-400 hover:bg-fuchsia-500/10 transition-all"
+            className="px-2 sm:px-3 py-1 rounded text-[10px] sm:text-xs font-bold border border-fuchsia-500 text-fuchsia-400 hover:bg-fuchsia-500/10 transition-all"
           >
-            {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : '🔗 Connect'}
+            {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : '🔗'}
           </button>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-4 p-4">
+      <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 p-2 sm:p-4 pb-12">
         {/* Left: Map + Prompt */}
         <div className="lg:w-1/2 space-y-4">
           <GridMap grid={grid} civs={civs} selectedCiv={selectedCiv} />
@@ -278,7 +304,7 @@ export default function App() {
 
         {/* Right: Resources + Log */}
         <div className="lg:w-1/2 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {civs.map(c => <ResourcePanel key={c.id} civ={c} />)}
           </div>
           <TerritoryChart grid={grid} civs={civs} />
@@ -290,7 +316,7 @@ export default function App() {
         </div>
       </div>
 
-      {winner && <GameOverOverlay winner={winner} turn={turn} />}
+      {winner && <GameOverOverlay winner={winner} turn={turn} stats={gameStats} />}
 
       <div className="fixed bottom-0 left-0 right-0 bg-gray-950/90 border-t border-gray-800 py-2 px-4 flex justify-between items-center text-xs text-gray-600">
         <span>0xCIV — Dojo Game Jam VIII</span>
