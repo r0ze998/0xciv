@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchAllOnChainData } from './torii'
 import { connectWallet, disconnectWallet } from './cartridge'
 import { sfxTurn, sfxAttack, sfxGather, sfxDefend, sfxTrade, sfxElimination, sfxGameOver } from './sfx'
-import { GridMap, TurnLog, ResourcePanel, LobbyScreen, GameOverOverlay, AutoPlayToggle, TurnBanner, MiniStats } from './components'
+import { GridMap, TurnLog, ResourcePanel, LobbyScreen, GameOverOverlay, AutoPlayToggle, TurnBanner, MiniStats, TerritoryChart } from './components'
+import { EventToast } from './components/EventToast'
 import { TurnTimeline } from './components/TurnTimeline'
 import type { TurnSnapshot } from './components/TurnTimeline'
 import { PRESET_STRATEGIES } from './lib/constants'
@@ -165,6 +166,7 @@ export default function App() {
   return (
     <div className={`min-h-screen bg-gray-950 text-white scanline ${combatShake ? 'animate-combat-shake' : ''}`}>
       <TurnBanner turn={turn} />
+      <EventToast logs={logs} />
 
       {/* Header */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-800">
@@ -255,6 +257,7 @@ export default function App() {
           <div className="grid grid-cols-2 gap-3">
             {civs.map(c => <ResourcePanel key={c.id} civ={c} />)}
           </div>
+          <TerritoryChart grid={grid} civs={civs} />
           <TurnTimeline history={history} civs={civs} currentTurn={turn} />
           <div>
             <h3 className="text-gray-500 text-sm mb-2 font-bold">TURN LOG</h3>
