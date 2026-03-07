@@ -1,0 +1,49 @@
+import { COLORS } from '../lib/constants'
+
+interface Props {
+  dataSource: 'loading' | 'torii' | 'mock'
+  onStart: () => void
+}
+
+export function LobbyScreen({ dataSource, onStart }: Props) {
+  return (
+    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white p-8">
+      <h1 className="text-6xl font-black mb-2 tracking-wider title-glow" style={{
+        background: 'linear-gradient(135deg, #00ffff, #ff00ff)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+      }}>0xCIV</h1>
+      <p className="text-gray-500 mb-8 text-lg tracking-wide">Your Words Shape Civilizations</p>
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        {COLORS.map((c, i) => (
+          <div key={i} className="px-6 py-3 rounded-lg border text-center" style={{ borderColor: c.color, color: c.color }}>
+            {c.name}
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={onStart}
+        className="px-8 py-3 rounded-lg font-bold text-lg bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 transition-all text-white shadow-lg shadow-fuchsia-500/25"
+      >
+        START GAME
+      </button>
+      <p className="text-gray-600 text-sm mt-4 flex items-center justify-center gap-2">
+        {dataSource === 'loading' && <span className="animate-spin">⏳</span>}
+        {dataSource === 'torii' ? '🟢 Connected to Torii (on-chain)' :
+         dataSource === 'mock' ? '🟡 Mock mode (Torii unavailable)' :
+         'Connecting to Torii...'}
+      </p>
+      <div className="mt-6 max-w-md text-left bg-gray-900/60 rounded-lg border border-gray-800 p-4">
+        <h3 className="text-cyan-400 text-sm font-bold mb-2">🎮 How to Play</h3>
+        <ol className="text-gray-400 text-xs space-y-1 list-decimal list-inside">
+          <li>Write a <span className="text-cyan-300">strategy prompt</span> to command your AI civilization</li>
+          <li>Your AI reads on-chain state and decides: gather, attack, defend, or trade</li>
+          <li>Last civilization standing wins — <span className="text-red-400">HP=0, Food=0, or no territories = eliminated</span></li>
+          <li>Opponent prompts are <span className="text-fuchsia-300">hidden</span> — information warfare!</li>
+        </ol>
+        <p className="text-gray-500 text-xs mt-2 italic">Theme: "Stop fighting bots — design around them"</p>
+      </div>
+      <p className="text-gray-700 text-xs mt-4">Dojo Game Jam VIII</p>
+    </div>
+  )
+}
