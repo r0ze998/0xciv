@@ -113,6 +113,21 @@ export default function App() {
     setLogs(prev => [...prev, { turn: 0, message: 'The world awakens. Four civilizations emerge from the void.', type: 'system' }])
   }
 
+  function startSpectate() {
+    // Apply preset strategies to all civs
+    const presets = PRESET_STRATEGIES.map(([, text]) => text)
+    const updated = civs.map((c, i) => ({ ...c, prompt: presets[i % presets.length] }))
+    setCivs(updated)
+    setPhase('playing')
+    setAutoPlay(true)
+    setAutoSpeed(1500)
+    setLogs(prev => [
+      ...prev,
+      { turn: 0, message: 'SPECTATOR MODE — All civilizations have been assigned AI strategies.', type: 'system' },
+      ...updated.map(c => ({ turn: 0, message: `${c.name}: "${c.prompt.slice(0, 60)}..."`, type: 'system' as const })),
+    ])
+  }
+
   function nextTurn() {
     if (winner) return
     if (dataSource === 'torii') {
@@ -162,7 +177,7 @@ export default function App() {
   }
 
   if (phase === 'lobby') {
-    return <LobbyScreen dataSource={dataSource} onStart={startGame} />
+    return <LobbyScreen dataSource={dataSource} onStart={startGame} onSpectate={startSpectate} />
   }
 
   return (
