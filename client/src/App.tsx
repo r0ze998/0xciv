@@ -6,6 +6,9 @@ import { useSound } from './hooks/useSound'
 import { GridMap, TurnLog, ResourcePanel, LobbyScreen, GameOverOverlay, AutoPlayToggle, TurnBanner, MiniStats, TerritoryChart } from './components'
 import { PromptHint } from './components/PromptHint'
 import { DiplomacyPanel } from './components/DiplomacyPanel'
+import { ParticleLayer, useParticles } from './components/Particles'
+import { Leaderboard, saveRecord } from './components/Leaderboard'
+import { ActionBar } from './components/ActionBar'
 import { EventToast } from './components/EventToast'
 import { TurnTimeline } from './components/TurnTimeline'
 import type { TurnSnapshot } from './components/TurnTimeline'
@@ -35,6 +38,8 @@ export default function App() {
     totalGathered: {},
   })
   const sound = useSound()
+  const { particles, emit } = useParticles()
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
 
   const playerCiv = civs[selectedCiv]
   const autoPlayRef = useRef(autoPlay)
@@ -176,16 +181,19 @@ export default function App() {
     })
 
     sound.play(sfxTurn)
+    // Random position for particles (center-ish of viewport)
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 3
     for (const log of result.logs) {
       if (log.type === 'combat') {
         sound.play(sfxAttack)
+        emit(cx + (Math.random() - 0.5) * 200, cy + (Math.random() - 0.5) * 100, 'attack')
         setCombatShake(true)
         setTimeout(() => setCombatShake(false), 400)
       }
-      else if (log.type === 'trade') sound.play(sfxTrade)
-      else if (log.type === 'elimination') sound.play(sfxElimination)
-      else if (log.type === 'action' && log.message.includes('Gather')) sound.play(sfxGather)
-      else if (log.type === 'action' && log.message.includes('Defend')) sound.play(sfxDefend)
+      else if (log.type === 'trade') { sound.play(sfxTrade); emit(cx, cy, 'trade') }
+      else if (log.type === 'elimination') { sound.play(sfxElimination); emit(cx, cy, 'elimination') }
+      else if (log.type === 'action' && log.message.includes('Gather')) { sound.play(sfxGather); emit(cx + (Math.random() - 0.5) * 200, cy, 'gather') }
+      else if (log.type === 'action' && log.message.includes('Defend')) { sound.play(sfxDefend); emit(cx, cy, 'defend') }
     }
     const alive = result.civs.filter(c => c.isAlive)
     if (alive.length <= 1 && result.civs.length > 1) {
@@ -194,7 +202,9 @@ export default function App() {
       setPhase('ended')
       setAutoPlay(false)
       sound.play(sfxGameOver)
+      emit(window.innerWidth / 2, window.innerHeight / 3, 'elimination')
       setLogs(prev => [...prev, { turn: newTurn, message: `${w.name} is the last civilization standing!`, type: 'system' }])
+      saveRecord({ winner: w.name, winnerColor: w.color, turns: newTurn, strategy: w.prompt.slice(0, 100) })
     }
   }
 
@@ -213,6 +223,8 @@ export default function App() {
     <div className={`min-h-screen bg-gray-950 text-white scanline ${combatShake ? 'animate-combat-shake' : ''}`}>
       <TurnBanner turn={turn} />
       <EventToast logs={logs} />
+      <ParticleLayer particles={particles} />
+      <Leaderboard show={showLeaderboard} onClose={() => setShowLeaderboard(false)} />
 
       {/* Header */}
       <div className="flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3 border-b border-gray-800">
@@ -308,6 +320,13 @@ export default function App() {
 
         {/* Right: Resources + Log */}
         <div className="lg:w-1/2 space-y-4">
+          <ActionBar
+            connected={!!walletAddress}
+            civs={civs}
+            selectedCiv={selectedCiv}
+            dataSource={dataSource}
+            onLog={(msg, type) => setLogs(prev => [...prev, { turn, message: msg, type }])}
+          />
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {civs.map(c => <ResourcePanel key={c.id} civ={c} />)}
           </div>
@@ -325,7 +344,8 @@ export default function App() {
 
       <div className="fixed bottom-0 left-0 right-0 bg-gray-950/90 border-t border-gray-800 py-2 px-4 flex justify-between items-center text-xs text-gray-600">
         <span>0xCIV — Dojo Game Jam VIII</span>
-        <div className="flex gap-4">
+        <div className="flex gap-3 items-center">
+          <button onClick={() => setShowLeaderboard(true)} className="text-yellow-600 hover:text-yellow-400 transition-all">🏆</button>
           <span className="hidden sm:inline text-gray-700">N: next · 1-4: civ · A: auto · M: mute</span>
           <a href="https://github.com/r0ze998/0xciv" target="_blank" rel="noopener" className="text-cyan-600 hover:text-cyan-400">GitHub</a>
         </div>
