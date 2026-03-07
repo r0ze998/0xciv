@@ -1,6 +1,7 @@
 import type { Civilization, Territory, ResourceType, Phase, LogEntry } from '../types/game'
 import type { OnChainCivilization, OnChainTerritory } from '../torii'
 import { COLORS, GRID_SIZE, RESOURCE_MAP, RESOURCE_ICONS } from './constants'
+import { getTechLevel } from '../components/TechTree'
 
 export function onChainCivToUI(civ: OnChainCivilization, index: number): Civilization {
   const colorInfo = COLORS[index] || COLORS[0]
@@ -139,8 +140,12 @@ export function simulateTurn(
       const res = ownedTiles.length > 0
         ? ownedTiles[Math.floor(Math.random() * ownedTiles.length)].resource
         : (['food', 'metal', 'knowledge'] as ResourceType[])[Math.floor(Math.random() * 3)]
-      c[res] += bonus
-      logs.push({ turn, message: `${c.name} gathered +${bonus} ${RESOURCE_ICONS[res]} ${res}`, type: 'action' })
+      // Tech bonus: Agriculture (+2)
+      const techLevel = getTechLevel(c.knowledge)
+      const techGatherBonus = techLevel >= 1 ? 2 : 0
+      const finalBonus = bonus + techGatherBonus
+      c[res] += finalBonus
+      logs.push({ turn, message: `${c.name} gathered +${finalBonus} ${RESOURCE_ICONS[res]} ${res}`, type: 'action' })
     } else if (action === 'attack') {
       const targets = alive.filter(t => t.id !== civ.id)
       if (targets.length > 0) {
@@ -158,8 +163,9 @@ export function simulateTurn(
         // Damage scales with attacker's metal, reduced by defender's knowledge
         const baseDmg = Math.floor(Math.random() * 15) + 5
         const metalBonus = Math.min(Math.floor(c.metal / 20), 10)
+        const techAttackBonus = getTechLevel(c.knowledge) >= 2 ? 3 : 0  // Bronze Working
         const knowledgeDefense = Math.min(Math.floor(t.knowledge / 15), 8)
-        const dmg = Math.max(3, baseDmg + metalBonus - knowledgeDefense)
+        const dmg = Math.max(3, baseDmg + metalBonus + techAttackBonus - knowledgeDefense)
         t.hp = Math.max(0, t.hp - dmg)
         c.metal = Math.max(0, c.metal - 5)
         const critical = dmg >= 20
@@ -176,7 +182,8 @@ export function simulateTurn(
         }
       }
     } else if (action === 'defend') {
-      const healAmount = 5 + Math.min(Math.floor(c.knowledge / 10), 5)
+      const techHealBonus = getTechLevel(c.knowledge) >= 4 ? 3 : 0  // Philosophy
+      const healAmount = 5 + Math.min(Math.floor(c.knowledge / 10), 5) + techHealBonus
       c.hp = Math.min(c.maxHp, c.hp + healAmount)
       logs.push({ turn, message: `${c.name} fortified defenses (+${healAmount} HP)`, type: 'action' })
     } else {

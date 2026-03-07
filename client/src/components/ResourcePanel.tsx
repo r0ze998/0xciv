@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import type { Civilization } from '../types/game'
 import { HPBar } from './HPBar'
 import { DangerIndicator } from './DangerIndicator'
+import { TechTree } from './TechTree'
 
 function usePrevious<T>(value: T): T | undefined {
   const ref = useRef<T>(undefined)
@@ -71,6 +72,7 @@ export function ResourcePanel({ civ }: { civ: Civilization }) {
           </span>
         </div>
       </div>
+      <TechTree civ={civ} />
     </div>
   )
 }
