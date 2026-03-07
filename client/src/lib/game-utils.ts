@@ -140,10 +140,11 @@ export function simulateTurn(
       const res = ownedTiles.length > 0
         ? ownedTiles[Math.floor(Math.random() * ownedTiles.length)].resource
         : (['food', 'metal', 'knowledge'] as ResourceType[])[Math.floor(Math.random() * 3)]
-      // Tech bonus: Agriculture (+2)
+      // Tech bonuses
       const techLevel = getTechLevel(c.knowledge)
       const techGatherBonus = techLevel >= 1 ? 2 : 0
-      const finalBonus = bonus + techGatherBonus
+      const enlightenmentMult = techLevel >= 6 ? 1.5 : 1  // Enlightenment
+      const finalBonus = Math.floor((bonus + techGatherBonus) * enlightenmentMult)
       c[res] += finalBonus
       logs.push({ turn, message: `${c.name} gathered +${finalBonus} ${RESOURCE_ICONS[res]} ${res}`, type: 'action' })
     } else if (action === 'attack') {
@@ -170,7 +171,8 @@ export function simulateTurn(
         c.metal = Math.max(0, c.metal - 5)
         const critical = dmg >= 20
         logs.push({ turn, message: `${c.name} attacked ${t.name} for ${dmg} damage!${critical ? ' 💥 CRITICAL HIT!' : ''}`, type: 'combat' })
-        if (Math.random() > 0.6) {
+        const captureChance = getTechLevel(c.knowledge) >= 5 ? 0.45 : 0.4  // Engineering bonus
+        if (Math.random() > (1 - captureChance)) {
           const targetTerritories = newGrid.flat().filter(tt => tt.owner === target.id)
           if (targetTerritories.length > 0) {
             const captured = targetTerritories[Math.floor(Math.random() * targetTerritories.length)]
