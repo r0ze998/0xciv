@@ -5,6 +5,7 @@ import { sfxTurn, sfxAttack, sfxGather, sfxDefend, sfxTrade, sfxElimination, sfx
 import { useSound } from './hooks/useSound'
 import { GridMap, TurnLog, ResourcePanel, LobbyScreen, GameOverOverlay, AutoPlayToggle, TurnBanner, MiniStats, TerritoryChart } from './components'
 import { PromptHint } from './components/PromptHint'
+import { DiplomacyPanel } from './components/DiplomacyPanel'
 import { EventToast } from './components/EventToast'
 import { TurnTimeline } from './components/TurnTimeline'
 import type { TurnSnapshot } from './components/TurnTimeline'
@@ -311,6 +312,7 @@ export default function App() {
             {civs.map(c => <ResourcePanel key={c.id} civ={c} />)}
           </div>
           <TerritoryChart grid={grid} civs={civs} />
+          <DiplomacyPanel civs={civs} />
           <TurnTimeline history={history} civs={civs} currentTurn={turn} />
           <div>
             <h3 className="text-gray-500 text-sm mb-2 font-bold">TURN LOG</h3>
