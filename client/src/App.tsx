@@ -9,6 +9,8 @@ import { DiplomacyPanel } from './components/DiplomacyPanel'
 import { ParticleLayer, useParticles } from './components/Particles'
 import { Leaderboard, saveRecord } from './components/Leaderboard'
 import { ActionBar } from './components/ActionBar'
+import { ReplayControls } from './components/ReplayControls'
+import { useReplay } from './hooks/useReplay'
 import { EventToast } from './components/EventToast'
 import { TurnTimeline } from './components/TurnTimeline'
 import type { TurnSnapshot } from './components/TurnTimeline'
@@ -40,8 +42,13 @@ export default function App() {
   const sound = useSound()
   const { particles, emit } = useParticles()
   const [showLeaderboard, setShowLeaderboard] = useState(false)
+  const replay = useReplay()
 
-  const playerCiv = civs[selectedCiv]
+  // Display data: use replay frame if replaying, otherwise live state
+  const displayCivs = replay.currentFrame?.civs ?? civs
+  const displayGrid = replay.currentFrame?.grid ?? grid
+  const displayTurn = replay.currentFrame?.turn ?? turn
+  const playerCiv = displayCivs[selectedCiv]
   const autoPlayRef = useRef(autoPlay)
   autoPlayRef.current = autoPlay
 
@@ -164,6 +171,14 @@ export default function App() {
     setLogs(prev => [...prev, ...result.logs])
     setTurn(newTurn)
 
+    // Record replay frame
+    replay.record({
+      turn: newTurn,
+      civs: result.civs.map(c => ({ ...c })),
+      grid: result.grid.map(row => row.map(t => ({ ...t }))),
+      logs: result.logs,
+    })
+
     // Track stats
     setGameStats(prev => {
       const s = { ...prev, totalTurns: newTurn }
@@ -224,7 +239,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen bg-gray-950 text-white scanline ${combatShake ? 'animate-combat-shake' : ''}`}>
-      <TurnBanner turn={turn} />
+      <TurnBanner turn={displayTurn} />
       <EventToast logs={logs} />
       <ParticleLayer particles={particles} />
       <Leaderboard show={showLeaderboard} onClose={() => setShowLeaderboard(false)} />
@@ -237,7 +252,7 @@ export default function App() {
           WebkitTextFillColor: 'transparent',
         }}>0xCIV</h1>
         <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap justify-end">
-          <span className="hidden sm:flex"><MiniStats civs={civs} turn={turn} /></span>
+          <span className="hidden sm:flex"><MiniStats civs={displayCivs} turn={displayTurn} /></span>
           <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded ${dataSource === 'torii' ? 'bg-green-900 text-green-400' : 'bg-yellow-900 text-yellow-400'}`}>
             {dataSource === 'torii' ? 'ON-CHAIN' : 'MOCK'}
           </span>
@@ -271,7 +286,7 @@ export default function App() {
       <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 p-2 sm:p-4 pb-12">
         {/* Left: Map + Prompt */}
         <div className="lg:w-1/2 space-y-4">
-          <GridMap grid={grid} civs={civs} selectedCiv={selectedCiv} />
+          <GridMap grid={displayGrid} civs={displayCivs} selectedCiv={selectedCiv} />
 
           <div className="flex gap-2">
             {civs.map((c, i) => (
@@ -325,7 +340,7 @@ export default function App() {
         <div className="lg:w-1/2 space-y-4">
           <ActionBar
             connected={!!walletAddress}
-            civs={civs}
+            civs={displayCivs}
             selectedCiv={selectedCiv}
             dataSource={dataSource}
             onLog={(msg, type) => setLogs(prev => [...prev, { turn, message: msg, type }])}
@@ -333,9 +348,21 @@ export default function App() {
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
             {civs.map(c => <ResourcePanel key={c.id} civ={c} />)}
           </div>
-          <TerritoryChart grid={grid} civs={civs} />
-          <DiplomacyPanel civs={civs} />
-          <TurnTimeline history={history} civs={civs} currentTurn={turn} />
+          <TerritoryChart grid={displayGrid} civs={displayCivs} />
+          <DiplomacyPanel civs={displayCivs} />
+          <TurnTimeline history={history} civs={displayCivs} currentTurn={turn} />
+          {(winner || replay.isReplaying) && (
+            <ReplayControls
+              isReplaying={replay.isReplaying}
+              replayIndex={replay.replayIndex}
+              totalFrames={replay.totalFrames}
+              onStart={replay.startReplay}
+              onStop={replay.stopReplay}
+              onNext={replay.next}
+              onPrev={replay.prev}
+              onSeek={replay.seekTo}
+            />
+          )}
           <div>
             <h3 className="text-gray-500 text-sm mb-2 font-bold">TURN LOG</h3>
             <TurnLog logs={logs} />
@@ -343,7 +370,7 @@ export default function App() {
         </div>
       </div>
 
-      {winner && <GameOverOverlay winner={winner} turn={turn} stats={gameStats} />}
+      {winner && !replay.isReplaying && <GameOverOverlay winner={winner} turn={turn} stats={gameStats} />}
 
       <div className="fixed bottom-0 left-0 right-0 bg-gray-950/90 border-t border-gray-800 py-2 px-4 flex justify-between items-center text-xs text-gray-600">
         <span>0xCIV — Dojo Game Jam VIII</span>
