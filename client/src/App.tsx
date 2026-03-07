@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchAllOnChainData } from './torii'
 import { connectWallet, disconnectWallet } from './cartridge'
 import { sfxTurn, sfxAttack, sfxGather, sfxDefend, sfxTrade, sfxElimination, sfxGameOver } from './sfx'
-import { GridMap, TurnLog, ResourcePanel, LobbyScreen, GameOverOverlay } from './components'
+import { GridMap, TurnLog, ResourcePanel, LobbyScreen, GameOverOverlay, AutoPlayToggle, TurnBanner, MiniStats } from './components'
 import { PRESET_STRATEGIES } from './lib/constants'
 import { onChainCivToUI, onChainTerritoriesToGrid, gamePhaseToUI, generateGrid, generateCivs, assignStartingTerritories, simulateTurn } from './lib/game-utils'
 import type { Civilization, Territory, Phase, LogEntry } from './types/game'
@@ -18,8 +18,13 @@ export default function App() {
   const [winner, setWinner] = useState<Civilization | null>(null)
   const [dataSource, setDataSource] = useState<'loading' | 'torii' | 'mock'>('loading')
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const [autoPlay, setAutoPlay] = useState(false)
+  const [autoSpeed, setAutoSpeed] = useState(1500)
+  const [combatShake, setCombatShake] = useState(false)
 
   const playerCiv = civs[selectedCiv]
+  const autoPlayRef = useRef(autoPlay)
+  autoPlayRef.current = autoPlay
 
   // Sync from Torii
   const syncFromTorii = useCallback(async () => {
@@ -82,10 +87,20 @@ export default function App() {
       if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return
       if (e.key === 'n' || e.key === 'N') nextTurn()
       if (e.key >= '1' && e.key <= '4') setSelectedCiv(parseInt(e.key) - 1)
+      if (e.key === 'a' || e.key === 'A') setAutoPlay(p => !p)
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
   })
+
+  // Auto-play loop
+  useEffect(() => {
+    if (!autoPlay || phase !== 'playing' || winner) return
+    const interval = setInterval(() => {
+      if (autoPlayRef.current) nextTurn()
+    }, autoSpeed)
+    return () => clearInterval(interval)
+  }, [autoPlay, autoSpeed, phase, winner])
 
   function startGame() {
     setPhase('playing')
@@ -107,7 +122,11 @@ export default function App() {
     setTurn(newTurn)
     sfxTurn()
     for (const log of result.logs) {
-      if (log.type === 'combat') sfxAttack()
+      if (log.type === 'combat') {
+        sfxAttack()
+        setCombatShake(true)
+        setTimeout(() => setCombatShake(false), 400)
+      }
       else if (log.type === 'trade') sfxTrade()
       else if (log.type === 'elimination') sfxElimination()
       else if (log.type === 'action' && log.message.includes('Gather')) sfxGather()
@@ -118,6 +137,7 @@ export default function App() {
       const w = alive[0] || result.civs[0]
       setWinner(w)
       setPhase('ended')
+      setAutoPlay(false)
       sfxGameOver()
       setLogs(prev => [...prev, { turn: newTurn, message: `${w.name} is the last civilization standing!`, type: 'system' }])
     }
@@ -135,20 +155,22 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className={`min-h-screen bg-gray-950 text-white scanline ${combatShake ? 'animate-combat-shake' : ''}`}>
+      <TurnBanner turn={turn} />
+
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-gray-800">
-        <h1 className="text-2xl font-black tracking-wider" style={{
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-gray-800">
+        <h1 className="text-xl sm:text-2xl font-black tracking-wider" style={{
           background: 'linear-gradient(135deg, #00ffff, #ff00ff)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
         }}>0xCIV</h1>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end">
+          <MiniStats civs={civs} turn={turn} />
           <span className={`text-xs px-2 py-0.5 rounded ${dataSource === 'torii' ? 'bg-green-900 text-green-400' : 'bg-yellow-900 text-yellow-400'}`}>
             {dataSource === 'torii' ? 'ON-CHAIN' : 'MOCK'}
           </span>
           <span className="text-cyan-400 text-sm font-mono font-bold">T{turn}</span>
-          <span className="text-gray-500 text-sm">{civs.filter(c => c.isAlive).length}/{civs.length} alive</span>
           <button
             onClick={async () => {
               if (walletAddress) {
@@ -203,13 +225,19 @@ export default function App() {
               placeholder="e.g. Prioritize food. If attacked, retaliate. Never trade with the weakest..."
               className="w-full h-24 bg-gray-800 rounded border border-gray-600 p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-cyan-500 focus:outline-none resize-none font-mono"
             />
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2 mt-2 items-center">
               <button onClick={savePrompt}
                 className="px-4 py-2 rounded text-sm font-bold bg-gray-800 border border-cyan-500 text-cyan-400 hover:bg-cyan-500/10 transition-all"
               >Save Prompt</button>
               <button onClick={nextTurn} disabled={!!winner}
-                className="flex-1 py-2 rounded text-sm font-bold bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="flex-1 py-2 rounded text-sm font-bold bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
               >{dataSource === 'torii' ? '🔄 REFRESH' : '⏩ NEXT TURN'}</button>
+              <AutoPlayToggle
+                enabled={autoPlay}
+                speed={autoSpeed}
+                onToggle={() => setAutoPlay(p => !p)}
+                onSpeedChange={setAutoSpeed}
+              />
             </div>
           </div>
         </div>
@@ -230,7 +258,10 @@ export default function App() {
 
       <div className="fixed bottom-0 left-0 right-0 bg-gray-950/90 border-t border-gray-800 py-2 px-4 flex justify-between items-center text-xs text-gray-600">
         <span>0xCIV — Dojo Game Jam VIII</span>
-        <a href="https://github.com/r0ze998/0xciv" target="_blank" rel="noopener" className="text-cyan-600 hover:text-cyan-400">GitHub</a>
+        <div className="flex gap-4">
+          <span className="hidden sm:inline text-gray-700">N: next turn · 1-4: select civ · A: auto-play</span>
+          <a href="https://github.com/r0ze998/0xciv" target="_blank" rel="noopener" className="text-cyan-600 hover:text-cyan-400">GitHub</a>
+        </div>
       </div>
     </div>
   )

@@ -18,8 +18,9 @@ export function TurnLog({ logs }: { logs: LogEntry[] }) {
       {logs.length === 0 && <p className="text-gray-600 italic">Waiting for first turn...</p>}
       {logs.map((log, i) => {
         const s = TYPE_STYLE[log.type] || { color: 'text-gray-400', icon: '•' }
+        const isRecent = i >= logs.length - 6
         return (
-          <div key={i} className={s.color}>
+          <div key={i} className={`${s.color} ${isRecent ? 'animate-log-entry' : ''} ${log.type === 'elimination' ? 'font-bold' : ''}`}>
             <span className="text-gray-600">[T{log.turn}]</span> {s.icon} {log.message}
           </div>
         )
