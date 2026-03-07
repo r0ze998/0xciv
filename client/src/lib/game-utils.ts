@@ -128,8 +128,14 @@ export function simulateTurn(
     const c = newCivs[civ.id]
 
     if (action === 'gather') {
-      const bonus = Math.floor(Math.random() * 15) + 5
-      const res = (['food', 'metal', 'knowledge'] as ResourceType[])[Math.floor(Math.random() * 3)]
+      // Gathering scales with territory count
+      const territoryBonus = Math.max(1, c.territories)
+      const bonus = Math.floor(Math.random() * 10 * Math.min(territoryBonus, 3)) + 5
+      // Gather resource based on owned territory types
+      const ownedTiles = newGrid.flat().filter(t => t.owner === civ.id)
+      const res = ownedTiles.length > 0
+        ? ownedTiles[Math.floor(Math.random() * ownedTiles.length)].resource
+        : (['food', 'metal', 'knowledge'] as ResourceType[])[Math.floor(Math.random() * 3)]
       c[res] += bonus
       logs.push({ turn, message: `${c.name} gathered +${bonus} ${RESOURCE_ICONS[res]} ${res}`, type: 'action' })
     } else if (action === 'attack') {
@@ -146,10 +152,15 @@ export function simulateTurn(
           target = targets[Math.floor(Math.random() * targets.length)]
         }
         const t = newCivs[target.id]
-        const dmg = Math.floor(Math.random() * 20) + 5
+        // Damage scales with attacker's metal, reduced by defender's knowledge
+        const baseDmg = Math.floor(Math.random() * 15) + 5
+        const metalBonus = Math.min(Math.floor(c.metal / 20), 10)
+        const knowledgeDefense = Math.min(Math.floor(t.knowledge / 15), 8)
+        const dmg = Math.max(3, baseDmg + metalBonus - knowledgeDefense)
         t.hp = Math.max(0, t.hp - dmg)
         c.metal = Math.max(0, c.metal - 5)
-        logs.push({ turn, message: `${c.name} attacked ${t.name} for ${dmg} damage!`, type: 'combat' })
+        const critical = dmg >= 20
+        logs.push({ turn, message: `${c.name} attacked ${t.name} for ${dmg} damage!${critical ? ' 💥 CRITICAL HIT!' : ''}`, type: 'combat' })
         if (Math.random() > 0.6) {
           const targetTerritories = newGrid.flat().filter(tt => tt.owner === target.id)
           if (targetTerritories.length > 0) {
@@ -162,15 +173,51 @@ export function simulateTurn(
         }
       }
     } else if (action === 'defend') {
-      c.hp = Math.min(c.maxHp, c.hp + 5)
-      logs.push({ turn, message: `${c.name} fortified defenses (+5 HP)`, type: 'action' })
+      const healAmount = 5 + Math.min(Math.floor(c.knowledge / 10), 5)
+      c.hp = Math.min(c.maxHp, c.hp + healAmount)
+      logs.push({ turn, message: `${c.name} fortified defenses (+${healAmount} HP)`, type: 'action' })
     } else {
-      c.food += 8
-      c.knowledge += 3
-      logs.push({ turn, message: `${c.name} traded resources (+8 food, +3 knowledge)`, type: 'trade' })
+      // Trading: better rates with more knowledge
+      const knowledgeBonus = Math.min(Math.floor(c.knowledge / 20), 5)
+      const foodGain = 8 + knowledgeBonus
+      const knowledgeGain = 3 + Math.floor(knowledgeBonus / 2)
+      c.food += foodGain
+      c.knowledge += knowledgeGain
+      logs.push({ turn, message: `${c.name} traded resources (+${foodGain} food, +${knowledgeGain} knowledge)`, type: 'trade' })
     }
     c.food = Math.max(0, c.food - 3)
   })
+
+  // Random events every 5 turns
+  if (turn % 5 === 0 && turn > 0) {
+    const eventRoll = Math.random()
+    const aliveNow = newCivs.filter(c => c.isAlive)
+    if (eventRoll < 0.25 && aliveNow.length > 0) {
+      // Famine — all civs lose food
+      const loss = Math.floor(Math.random() * 10) + 5
+      aliveNow.forEach(c => { c.food = Math.max(0, c.food - loss) })
+      logs.push({ turn, message: `🌾 FAMINE strikes! All civilizations lose ${loss} food.`, type: 'system' })
+    } else if (eventRoll < 0.5 && aliveNow.length > 0) {
+      // Bounty — random civ gets bonus
+      const lucky = aliveNow[Math.floor(Math.random() * aliveNow.length)]
+      const bonus = Math.floor(Math.random() * 15) + 10
+      lucky.food += bonus
+      lucky.metal += Math.floor(bonus / 2)
+      logs.push({ turn, message: `🎁 BOUNTY! ${lucky.name} discovers ancient resources (+${bonus} food, +${Math.floor(bonus / 2)} metal)`, type: 'system' })
+    } else if (eventRoll < 0.7) {
+      // Plague — random civ loses HP
+      const unlucky = aliveNow[Math.floor(Math.random() * aliveNow.length)]
+      const dmg = Math.floor(Math.random() * 15) + 5
+      unlucky.hp = Math.max(1, unlucky.hp - dmg)
+      logs.push({ turn, message: `🦠 PLAGUE hits ${unlucky.name}! -${dmg} HP`, type: 'system' })
+    } else if (eventRoll < 0.85) {
+      // Knowledge boom — all gain knowledge
+      const gain = Math.floor(Math.random() * 8) + 3
+      aliveNow.forEach(c => { c.knowledge += gain })
+      logs.push({ turn, message: `📖 RENAISSANCE! All civilizations gain +${gain} knowledge.`, type: 'system' })
+    }
+    // 15% chance of no event
+  }
 
   newCivs.forEach(c => {
     if (!c.isAlive) return
