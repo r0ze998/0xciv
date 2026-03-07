@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Civilization } from '../types/game'
 import { HPBar } from './HPBar'
+import { DangerIndicator } from './DangerIndicator'
 
 function usePrevious<T>(value: T): T | undefined {
   const ref = useRef<T>(undefined)
@@ -35,6 +36,7 @@ export function ResourcePanel({ civ }: { civ: Civilization }) {
         <h3 className="font-bold text-sm sm:text-lg truncate" style={{ color: civ.isAlive ? civ.color : '#6b7280' }}>{civ.name}</h3>
         {!civ.isAlive && <span className="text-red-500 text-xs font-bold animate-pulse">☠️ ELIMINATED</span>}
       </div>
+      <DangerIndicator civ={civ} />
       <div>
         <div className="flex justify-between text-xs text-gray-400 mb-1">
           <span>HP</span>

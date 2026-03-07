@@ -4,6 +4,7 @@ import { connectWallet, disconnectWallet } from './cartridge'
 import { sfxTurn, sfxAttack, sfxGather, sfxDefend, sfxTrade, sfxElimination, sfxGameOver } from './sfx'
 import { useSound } from './hooks/useSound'
 import { GridMap, TurnLog, ResourcePanel, LobbyScreen, GameOverOverlay, AutoPlayToggle, TurnBanner, MiniStats, TerritoryChart } from './components'
+import { PromptHint } from './components/PromptHint'
 import { EventToast } from './components/EventToast'
 import { TurnTimeline } from './components/TurnTimeline'
 import type { TurnSnapshot } from './components/TurnTimeline'
@@ -272,6 +273,7 @@ export default function App() {
 
           <div className="bg-gray-900/80 rounded-lg border border-gray-700 p-4">
             <label className="text-gray-400 text-sm block mb-2">Strategy Prompt — Tell your AI how to lead</label>
+            <PromptHint civ={playerCiv} allCivs={civs} />
             <div className="flex gap-1 mb-2 flex-wrap">
               {PRESET_STRATEGIES.map(([label, text]) => (
                 <button key={label} onClick={() => setPrompt(text)}
