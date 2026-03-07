@@ -10,12 +10,14 @@ import { TurnTimeline } from './components/TurnTimeline'
 import type { TurnSnapshot } from './components/TurnTimeline'
 import { PromptHint } from './components/PromptHint'
 import { DiplomacyPanel } from './components/DiplomacyPanel'
+import { PowerRanking } from './components/PowerRanking'
 import { ParticleLayer, useParticles } from './components/Particles'
 import { Leaderboard, saveRecord } from './components/Leaderboard'
 import { ActionBar } from './components/ActionBar'
 import { ReplayControls } from './components/ReplayControls'
 import { GameSettings } from './components/GameSettings'
 import { PRESET_STRATEGIES } from './lib/constants'
+import { getWarCry } from './lib/war-cries'
 import { generateCivs } from './lib/game-utils'
 
 export default function App() {
@@ -26,6 +28,7 @@ export default function App() {
   const [showLeaderboard, setShowLeaderboard] = useState(false)
   const [combatShake, setCombatShake] = useState(false)
   const [history, setHistory] = useState<TurnSnapshot[]>([])
+  const [warCry, setWarCry] = useState<{ text: string; color: string } | null>(null)
 
   const displayCivs = replay.currentFrame?.civs ?? game.civs
   const displayGrid = replay.currentFrame?.grid ?? game.grid
@@ -97,6 +100,10 @@ export default function App() {
         emit(cx + (Math.random() - 0.5) * 200, cy + (Math.random() - 0.5) * 100, 'attack')
         setCombatShake(true)
         setTimeout(() => setCombatShake(false), 400)
+        // War cry from attacker
+        const attackerName = log.message.split(' attacked')[0]
+        const attacker = game.civs.find(c => c.name === attackerName)
+        if (attacker) setWarCry({ text: getWarCry('combat'), color: attacker.color })
       }
       else if (log.type === 'trade') { sound.play(sfxTrade); emit(cx, cy, 'trade') }
       else if (log.type === 'elimination') { sound.play(sfxElimination); emit(cx, cy, 'elimination') }
@@ -135,7 +142,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen bg-gray-950 text-white scanline ${combatShake ? 'animate-combat-shake' : ''}`}>
-      <TurnBanner turn={displayTurn} />
+      <TurnBanner turn={displayTurn} warCry={warCry?.text} warCryColor={warCry?.color} />
       <EventToast logs={game.logs} />
       <ParticleLayer particles={particles} />
       <Leaderboard show={showLeaderboard} onClose={() => setShowLeaderboard(false)} />
@@ -223,6 +230,7 @@ export default function App() {
             {displayCivs.map(c => <ResourcePanel key={c.id} civ={c} />)}
           </div>
           <TerritoryChart grid={displayGrid} civs={displayCivs} />
+          <PowerRanking civs={displayCivs} />
           <DiplomacyPanel civs={displayCivs} />
           <TurnTimeline history={history} civs={displayCivs} currentTurn={game.turn} />
           {(game.winner || replay.isReplaying) && (
