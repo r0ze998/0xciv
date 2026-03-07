@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchAllOnChainData } from './torii'
 import { connectWallet, disconnectWallet } from './cartridge'
 import { sfxTurn, sfxAttack, sfxGather, sfxDefend, sfxTrade, sfxElimination, sfxGameOver } from './sfx'
+import { useSound } from './hooks/useSound'
 import { GridMap, TurnLog, ResourcePanel, LobbyScreen, GameOverOverlay, AutoPlayToggle, TurnBanner, MiniStats, TerritoryChart } from './components'
 import { EventToast } from './components/EventToast'
 import { TurnTimeline } from './components/TurnTimeline'
@@ -25,6 +26,7 @@ export default function App() {
   const [autoSpeed, setAutoSpeed] = useState(1500)
   const [combatShake, setCombatShake] = useState(false)
   const [history, setHistory] = useState<TurnSnapshot[]>([])
+  const sound = useSound()
 
   const playerCiv = civs[selectedCiv]
   const autoPlayRef = useRef(autoPlay)
@@ -129,17 +131,17 @@ export default function App() {
     setGrid(result.grid)
     setLogs(prev => [...prev, ...result.logs])
     setTurn(newTurn)
-    sfxTurn()
+    sound.play(sfxTurn)
     for (const log of result.logs) {
       if (log.type === 'combat') {
-        sfxAttack()
+        sound.play(sfxAttack)
         setCombatShake(true)
         setTimeout(() => setCombatShake(false), 400)
       }
-      else if (log.type === 'trade') sfxTrade()
-      else if (log.type === 'elimination') sfxElimination()
-      else if (log.type === 'action' && log.message.includes('Gather')) sfxGather()
-      else if (log.type === 'action' && log.message.includes('Defend')) sfxDefend()
+      else if (log.type === 'trade') sound.play(sfxTrade)
+      else if (log.type === 'elimination') sound.play(sfxElimination)
+      else if (log.type === 'action' && log.message.includes('Gather')) sound.play(sfxGather)
+      else if (log.type === 'action' && log.message.includes('Defend')) sound.play(sfxDefend)
     }
     const alive = result.civs.filter(c => c.isAlive)
     if (alive.length <= 1 && result.civs.length > 1) {
@@ -147,7 +149,7 @@ export default function App() {
       setWinner(w)
       setPhase('ended')
       setAutoPlay(false)
-      sfxGameOver()
+      sound.play(sfxGameOver)
       setLogs(prev => [...prev, { turn: newTurn, message: `${w.name} is the last civilization standing!`, type: 'system' }])
     }
   }
@@ -181,6 +183,13 @@ export default function App() {
             {dataSource === 'torii' ? 'ON-CHAIN' : 'MOCK'}
           </span>
           <span className="text-cyan-400 text-sm font-mono font-bold">T{turn}</span>
+          <button
+            onClick={sound.toggle}
+            className="px-2 py-1 rounded text-xs border border-gray-700 text-gray-400 hover:border-gray-500 transition-all"
+            title={sound.muted ? 'Unmute' : 'Mute'}
+          >
+            {sound.muted ? '🔇' : '🔊'}
+          </button>
           <button
             onClick={async () => {
               if (walletAddress) {
