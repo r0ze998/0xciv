@@ -11,6 +11,8 @@ import type { TurnSnapshot } from './components/TurnTimeline'
 import { PromptHint } from './components/PromptHint'
 import { DiplomacyPanel } from './components/DiplomacyPanel'
 import { PowerRanking } from './components/PowerRanking'
+import { GameClock } from './components/GameClock'
+import { QuickTips } from './components/QuickTips'
 import { ParticleLayer, useParticles } from './components/Particles'
 import { Leaderboard, saveRecord } from './components/Leaderboard'
 import { ActionBar } from './components/ActionBar'
@@ -160,6 +162,7 @@ export default function App() {
             {game.dataSource === 'torii' ? 'ON-CHAIN' : 'MOCK'}
           </span>
           <span className="text-cyan-400 text-xs sm:text-sm font-mono font-bold">T{game.turn}</span>
+          <GameClock isPlaying={game.phase === 'playing' && !game.winner} />
           {replay.isReplaying && <span className="text-purple-400 text-[10px] font-bold animate-pulse">REPLAY</span>}
           <button onClick={sound.toggle}
             className="p-1 sm:px-2 sm:py-1 rounded text-xs border border-gray-700 text-gray-400 hover:border-gray-500 transition-all"
@@ -178,6 +181,7 @@ export default function App() {
       <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 p-2 sm:p-4 pb-12">
         {/* Left: Map + Prompt */}
         <div className="lg:w-1/2 space-y-4">
+          <QuickTips />
           <GridMap grid={displayGrid} civs={displayCivs} selectedCiv={game.selectedCiv} />
 
           <div className="flex gap-2">
