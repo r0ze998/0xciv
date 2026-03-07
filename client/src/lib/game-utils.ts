@@ -65,14 +65,14 @@ export function generateGrid(): Territory[][] {
   )
 }
 
-export function generateCivs(): Civilization[] {
+export function generateCivs(startingHP = 100, startingFood = 50): Civilization[] {
   return COLORS.map((c, i) => ({
     id: i,
     name: c.name,
     color: c.color,
     neonClass: c.neonClass,
-    hp: 100, maxHp: 100,
-    food: 50, metal: 30, knowledge: 10,
+    hp: startingHP, maxHp: startingHP,
+    food: startingFood, metal: 30, knowledge: 10,
     territories: 1, isAlive: true, prompt: '',
   }))
 }
@@ -116,8 +116,11 @@ function chooseAction(civ: Civilization, civs: Civilization[]): string {
 export function simulateTurn(
   civs: Civilization[],
   grid: Territory[][],
-  turn: number
+  turn: number,
+  settings?: { foodDrain?: number; eventFrequency?: number }
 ): { civs: Civilization[]; grid: Territory[][]; logs: LogEntry[] } {
+  const foodDrain = settings?.foodDrain ?? 3
+  const eventFreq = settings?.eventFrequency ?? 5
   const newCivs = civs.map(c => ({ ...c }))
   const newGrid = grid.map(row => row.map(t => ({ ...t })))
   const logs: LogEntry[] = []
@@ -185,11 +188,11 @@ export function simulateTurn(
       c.knowledge += knowledgeGain
       logs.push({ turn, message: `${c.name} traded resources (+${foodGain} food, +${knowledgeGain} knowledge)`, type: 'trade' })
     }
-    c.food = Math.max(0, c.food - 3)
+    c.food = Math.max(0, c.food - foodDrain)
   })
 
-  // Random events every 5 turns
-  if (turn % 5 === 0 && turn > 0) {
+  // Random events
+  if (turn % eventFreq === 0 && turn > 0) {
     const eventRoll = Math.random()
     const aliveNow = newCivs.filter(c => c.isAlive)
     if (eventRoll < 0.25 && aliveNow.length > 0) {

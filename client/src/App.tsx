@@ -11,6 +11,8 @@ import { Leaderboard, saveRecord } from './components/Leaderboard'
 import { ActionBar } from './components/ActionBar'
 import { ReplayControls } from './components/ReplayControls'
 import { useReplay } from './hooks/useReplay'
+import { GameSettings, DEFAULT_SETTINGS } from './components/GameSettings'
+import type { Settings } from './components/GameSettings'
 import { EventToast } from './components/EventToast'
 import { TurnTimeline } from './components/TurnTimeline'
 import type { TurnSnapshot } from './components/TurnTimeline'
@@ -43,6 +45,7 @@ export default function App() {
   const { particles, emit } = useParticles()
   const [showLeaderboard, setShowLeaderboard] = useState(false)
   const replay = useReplay()
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
 
   // Display data: use replay frame if replaying, otherwise live state
   const displayCivs = replay.currentFrame?.civs ?? civs
@@ -165,7 +168,7 @@ export default function App() {
       turn,
       civData: civs.map(c => ({ id: c.id, hp: c.hp, food: c.food, territories: c.territories, isAlive: c.isAlive })),
     }])
-    const result = simulateTurn(civs, grid, newTurn)
+    const result = simulateTurn(civs, grid, newTurn, { foodDrain: settings.foodDrain, eventFrequency: settings.eventFrequency })
     setCivs(result.civs)
     setGrid(result.grid)
     setLogs(prev => [...prev, ...result.logs])
@@ -234,7 +237,17 @@ export default function App() {
   }
 
   if (phase === 'lobby') {
-    return <LobbyScreen dataSource={dataSource} onStart={startGame} onSpectate={startSpectate} />
+    return (
+      <div>
+        <LobbyScreen dataSource={dataSource} onStart={startGame} onSpectate={startSpectate} />
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10">
+          <GameSettings onApply={(s) => {
+            setSettings(s)
+            setCivs(generateCivs(s.startingHP, s.startingFood))
+          }} />
+        </div>
+      </div>
+    )
   }
 
   return (
