@@ -13,6 +13,7 @@ import { DiplomacyPanel } from './components/DiplomacyPanel'
 import { PowerRanking } from './components/PowerRanking'
 import { GameClock } from './components/GameClock'
 import { QuickTips } from './components/QuickTips'
+import { IntroSequence } from './components/IntroSequence'
 import { ParticleLayer, useParticles } from './components/Particles'
 import { Leaderboard, saveRecord } from './components/Leaderboard'
 import { ActionBar } from './components/ActionBar'
@@ -31,6 +32,7 @@ export default function App() {
   const [combatShake, setCombatShake] = useState(false)
   const [history, setHistory] = useState<TurnSnapshot[]>([])
   const [warCry, setWarCry] = useState<{ text: string; color: string } | null>(null)
+  const [showIntro, setShowIntro] = useState(false)
 
   const displayCivs = replay.currentFrame?.civs ?? game.civs
   const displayGrid = replay.currentFrame?.grid ?? game.grid
@@ -62,6 +64,11 @@ export default function App() {
 
   function startGame(names?: string[]) {
     if (names) game.setCivs(prev => prev.map((c, i) => ({ ...c, name: names[i] || c.name })))
+    setShowIntro(true)
+  }
+
+  function onIntroComplete() {
+    setShowIntro(false)
     game.setPhase('playing')
     game.setLogs(prev => [...prev, { turn: 0, message: 'The world awakens. Four civilizations emerge from the void.', type: 'system' }])
   }
@@ -126,6 +133,10 @@ export default function App() {
     updated[game.selectedCiv] = { ...updated[game.selectedCiv], prompt: game.prompt }
     game.setCivs(updated)
     game.setLogs(prev => [...prev, { turn: game.turn, message: `${playerCiv.name} updated their strategy prompt`, type: 'system' }])
+  }
+
+  if (showIntro) {
+    return <IntroSequence civs={game.civs} onComplete={onIntroComplete} />
   }
 
   if (game.phase === 'lobby') {
