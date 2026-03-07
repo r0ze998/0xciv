@@ -22,6 +22,23 @@ export function LobbyScreen({ dataSource, onStart, onSpectate }: Props) {
         <p className="text-gray-500 mb-8 text-lg tracking-wide text-center">Your Words Shape Civilizations</p>
       </div>
 
+      <div className="flex gap-1.5 mb-3 animate-fade-up-delay-1 flex-wrap justify-center">
+        {[
+          { label: '🏛️ Classic', names: ['Cyan Empire', 'Magenta Dominion', 'Gold Republic', 'Jade Federation'] },
+          { label: '⚔️ Warriors', names: ['Starknet Legion', 'Cairo Guard', 'Dojo Order', 'Blockchain Horde'] },
+          { label: '🎌 日本', names: ['織田軍団', '武田騎馬隊', '上杉連合', '毛利水軍'] },
+          { label: '🌌 Sci-Fi', names: ['Neon Syndicate', 'Void Collective', 'Quantum Nexus', 'Solar Imperium'] },
+        ].map(pack => (
+          <button
+            key={pack.label}
+            onClick={() => setNames(pack.names)}
+            className="px-2 py-1 rounded text-[10px] bg-gray-900 border border-gray-700 text-gray-400 hover:border-fuchsia-500 hover:text-fuchsia-400 transition-all"
+          >
+            {pack.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 gap-4 mb-8 animate-fade-up-delay-1">
         {COLORS.map((c, i) => (
           <div key={i}
