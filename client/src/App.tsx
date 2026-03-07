@@ -122,7 +122,10 @@ export default function App() {
     return () => clearInterval(interval)
   }, [autoPlay, autoSpeed, phase, winner])
 
-  function startGame() {
+  function startGame(names?: string[]) {
+    if (names) {
+      setCivs(prev => prev.map((c, i) => ({ ...c, name: names[i] || c.name })))
+    }
     setPhase('playing')
     setLogs(prev => [...prev, { turn: 0, message: 'The world awakens. Four civilizations emerge from the void.', type: 'system' }])
   }

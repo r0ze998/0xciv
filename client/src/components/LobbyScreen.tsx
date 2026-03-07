@@ -1,12 +1,16 @@
+import { useState } from 'react'
 import { COLORS } from '../lib/constants'
 
 interface Props {
   dataSource: 'loading' | 'torii' | 'mock'
-  onStart: () => void
+  onStart: (names?: string[]) => void
   onSpectate: () => void
 }
 
 export function LobbyScreen({ dataSource, onStart, onSpectate }: Props) {
+  const [names, setNames] = useState(COLORS.map(c => c.name))
+  const [editing, setEditing] = useState<number | null>(null)
+
   return (
     <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-white p-8 scanline">
       <div className="animate-fade-up">
@@ -20,17 +24,33 @@ export function LobbyScreen({ dataSource, onStart, onSpectate }: Props) {
 
       <div className="grid grid-cols-2 gap-4 mb-8 animate-fade-up-delay-1">
         {COLORS.map((c, i) => (
-          <div key={i} className="px-6 py-3 rounded-lg border text-center transition-all hover:scale-105 cursor-default"
+          <div key={i}
+            className="px-6 py-3 rounded-lg border text-center transition-all hover:scale-105 cursor-pointer"
             style={{ borderColor: c.color, color: c.color, boxShadow: `0 0 12px ${c.color}22` }}
+            onClick={() => setEditing(i)}
+            title="Click to rename"
           >
-            {c.name}
+            {editing === i ? (
+              <input
+                autoFocus
+                value={names[i]}
+                onChange={e => { const n = [...names]; n[i] = e.target.value; setNames(n) }}
+                onBlur={() => setEditing(null)}
+                onKeyDown={e => e.key === 'Enter' && setEditing(null)}
+                className="bg-transparent text-center w-full outline-none border-b"
+                style={{ color: c.color, borderColor: c.color }}
+                maxLength={20}
+              />
+            ) : (
+              <span>{names[i]} <span className="text-[10px] opacity-40">✏️</span></span>
+            )}
           </div>
         ))}
       </div>
 
       <div className="animate-fade-up-delay-2">
         <button
-          onClick={onStart}
+          onClick={() => onStart(names)}
           className="px-8 py-3 rounded-lg font-bold text-lg bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 transition-all text-white shadow-lg shadow-fuchsia-500/25 hover:scale-105 active:scale-95"
         >
           START GAME
