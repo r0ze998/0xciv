@@ -1,4 +1,5 @@
 import type { Civilization, GameStats } from '../types/game'
+import { ShareCard } from './ShareCard'
 
 interface Props {
   winner: Civilization
@@ -91,6 +92,8 @@ export function GameOverOverlay({ winner, turn, stats }: Props) {
             )}
           </div>
         )}
+
+        <ShareCard winner={winner} turn={turn} stats={stats} />
 
         <button
           onClick={() => window.location.reload()}
