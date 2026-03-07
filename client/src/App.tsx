@@ -1,122 +1,45 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { fetchAllOnChainData } from './torii'
+import { useState, useEffect } from 'react'
 import { connectWallet, disconnectWallet } from './cartridge'
 import { sfxTurn, sfxAttack, sfxGather, sfxDefend, sfxTrade, sfxElimination, sfxGameOver } from './sfx'
 import { useSound } from './hooks/useSound'
+import { useGameState } from './hooks/useGameState'
+import { useReplay } from './hooks/useReplay'
 import { GridMap, TurnLog, ResourcePanel, LobbyScreen, GameOverOverlay, AutoPlayToggle, TurnBanner, MiniStats, TerritoryChart } from './components'
+import { EventToast } from './components/EventToast'
+import { TurnTimeline } from './components/TurnTimeline'
+import type { TurnSnapshot } from './components/TurnTimeline'
 import { PromptHint } from './components/PromptHint'
 import { DiplomacyPanel } from './components/DiplomacyPanel'
 import { ParticleLayer, useParticles } from './components/Particles'
 import { Leaderboard, saveRecord } from './components/Leaderboard'
 import { ActionBar } from './components/ActionBar'
 import { ReplayControls } from './components/ReplayControls'
-import { useReplay } from './hooks/useReplay'
-import { GameSettings, DEFAULT_SETTINGS } from './components/GameSettings'
-import type { Settings } from './components/GameSettings'
-import { EventToast } from './components/EventToast'
-import { TurnTimeline } from './components/TurnTimeline'
-import type { TurnSnapshot } from './components/TurnTimeline'
+import { GameSettings } from './components/GameSettings'
 import { PRESET_STRATEGIES } from './lib/constants'
-import { onChainCivToUI, onChainTerritoriesToGrid, gamePhaseToUI, generateGrid, generateCivs, assignStartingTerritories, simulateTurn } from './lib/game-utils'
-import type { Civilization, Territory, Phase, LogEntry, GameStats } from './types/game'
+import { generateCivs } from './lib/game-utils'
 
 export default function App() {
-  const [phase, setPhase] = useState<Phase>('lobby')
-  const [grid, setGrid] = useState<Territory[][]>(() => assignStartingTerritories(generateGrid()))
-  const [civs, setCivs] = useState<Civilization[]>(generateCivs)
-  const [turn, setTurn] = useState(0)
-  const [logs, setLogs] = useState<LogEntry[]>([])
-  const [selectedCiv, setSelectedCiv] = useState(0)
-  const [prompt, setPrompt] = useState('')
-  const [winner, setWinner] = useState<Civilization | null>(null)
-  const [dataSource, setDataSource] = useState<'loading' | 'torii' | 'mock'>('loading')
-  const [walletAddress, setWalletAddress] = useState<string | null>(null)
-  const [autoPlay, setAutoPlay] = useState(false)
-  const [autoSpeed, setAutoSpeed] = useState(1500)
-  const [combatShake, setCombatShake] = useState(false)
-  const [history, setHistory] = useState<TurnSnapshot[]>([])
-  const [gameStats, setGameStats] = useState<GameStats>({
-    totalTurns: 0, combatEvents: 0, tradeEvents: 0, eliminationOrder: [],
-    peakHP: { name: '', color: '', hp: 0, turn: 0 },
-    peakTerritories: { name: '', color: '', count: 0, turn: 0 },
-    totalGathered: {},
-  })
+  const game = useGameState()
   const sound = useSound()
   const { particles, emit } = useParticles()
-  const [showLeaderboard, setShowLeaderboard] = useState(false)
   const replay = useReplay()
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
+  const [combatShake, setCombatShake] = useState(false)
+  const [history, setHistory] = useState<TurnSnapshot[]>([])
 
-  // Display data: use replay frame if replaying, otherwise live state
-  const displayCivs = replay.currentFrame?.civs ?? civs
-  const displayGrid = replay.currentFrame?.grid ?? grid
-  const displayTurn = replay.currentFrame?.turn ?? turn
-  const playerCiv = displayCivs[selectedCiv]
-  const autoPlayRef = useRef(autoPlay)
-  autoPlayRef.current = autoPlay
-
-  // Sync from Torii
-  const syncFromTorii = useCallback(async () => {
-    try {
-      const { gameState, civs: onChainCivs, territories, events } = await fetchAllOnChainData(1)
-      if (!gameState || onChainCivs.length === 0) {
-        if (dataSource === 'loading') {
-          setDataSource('mock')
-          setLogs(prev => [...prev, { turn: 0, message: 'No on-chain game found. Using mock simulation.', type: 'system' }])
-        }
-        return
-      }
-
-      const uiCivs = onChainCivs.sort((a, b) => a.civ_id - b.civ_id).map((c, i) => onChainCivToUI(c, i))
-      const uiGrid = onChainTerritoriesToGrid(territories)
-      const uiPhase = gamePhaseToUI(gameState.game_phase)
-
-      setCivs(prev => uiCivs.map((c, i) => ({ ...c, prompt: prev[i]?.prompt || '' })))
-      setGrid(uiGrid)
-      setTurn(gameState.turn_number)
-      setPhase(uiPhase)
-
-      if (uiPhase === 'ended') {
-        const alive = uiCivs.find(c => c.isAlive)
-        if (alive) setWinner(alive)
-      }
-
-      if (events && events.length > 0) {
-        const eventLogs: LogEntry[] = events.map(e => {
-          if (e.type === 'action') return { turn: e.turn || 0, message: `Civ #${e.civ_id} performed ${e.action}`, type: 'system' as const }
-          if (e.type === 'combat') return { turn: 0, message: `⚔️ Civ #${e.attacker_civ} attacked Civ #${e.defender_civ} — ${e.attacker_won ? 'Victory' : 'Repelled'}! ${e.hp_damage} damage`, type: 'combat' as const }
-          if (e.type === 'elimination') return { turn: 0, message: `☠️ Civ #${e.civ_id} has been eliminated!`, type: 'elimination' as const }
-          return { turn: 0, message: 'Trade event', type: 'trade' as const }
-        })
-        setLogs(eventLogs)
-      }
-
-      if (dataSource !== 'torii') {
-        setDataSource('torii')
-        setLogs(prev => [...prev, { turn: 0, message: 'Connected to Torii. Showing on-chain data.', type: 'system' }])
-      }
-    } catch {
-      if (dataSource === 'loading') {
-        setDataSource('mock')
-        setLogs(prev => [...prev, { turn: 0, message: 'Torii unavailable. Using mock simulation.', type: 'system' }])
-      }
-    }
-  }, [dataSource])
-
-  useEffect(() => {
-    syncFromTorii()
-    const interval = setInterval(syncFromTorii, 3000)
-    return () => clearInterval(interval)
-  }, [syncFromTorii])
+  const displayCivs = replay.currentFrame?.civs ?? game.civs
+  const displayGrid = replay.currentFrame?.grid ?? game.grid
+  const displayTurn = replay.currentFrame?.turn ?? game.turn
+  const playerCiv = displayCivs[game.selectedCiv]
 
   // Keyboard shortcuts
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
-      if (phase !== 'playing' || winner) return
+      if (game.phase !== 'playing' || game.winner) return
       if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return
       if (e.key === 'n' || e.key === 'N') nextTurn()
-      if (e.key >= '1' && e.key <= '4') setSelectedCiv(parseInt(e.key) - 1)
-      if (e.key === 'a' || e.key === 'A') setAutoPlay(p => !p)
+      if (e.key >= '1' && e.key <= '4') game.setSelectedCiv(parseInt(e.key) - 1)
+      if (e.key === 'a' || e.key === 'A') game.setAutoPlay(p => !p)
       if (e.key === 'm' || e.key === 'M') sound.toggle()
     }
     window.addEventListener('keydown', handleKey)
@@ -125,30 +48,27 @@ export default function App() {
 
   // Auto-play loop
   useEffect(() => {
-    if (!autoPlay || phase !== 'playing' || winner) return
+    if (!game.autoPlay || game.phase !== 'playing' || game.winner) return
     const interval = setInterval(() => {
-      if (autoPlayRef.current) nextTurn()
-    }, autoSpeed)
+      if (game.autoPlayRef.current) nextTurn()
+    }, game.autoSpeed)
     return () => clearInterval(interval)
-  }, [autoPlay, autoSpeed, phase, winner])
+  }, [game.autoPlay, game.autoSpeed, game.phase, game.winner])
 
   function startGame(names?: string[]) {
-    if (names) {
-      setCivs(prev => prev.map((c, i) => ({ ...c, name: names[i] || c.name })))
-    }
-    setPhase('playing')
-    setLogs(prev => [...prev, { turn: 0, message: 'The world awakens. Four civilizations emerge from the void.', type: 'system' }])
+    if (names) game.setCivs(prev => prev.map((c, i) => ({ ...c, name: names[i] || c.name })))
+    game.setPhase('playing')
+    game.setLogs(prev => [...prev, { turn: 0, message: 'The world awakens. Four civilizations emerge from the void.', type: 'system' }])
   }
 
   function startSpectate() {
-    // Apply preset strategies to all civs
     const presets = PRESET_STRATEGIES.map(([, text]) => text)
-    const updated = civs.map((c, i) => ({ ...c, prompt: presets[i % presets.length] }))
-    setCivs(updated)
-    setPhase('playing')
-    setAutoPlay(true)
-    setAutoSpeed(1500)
-    setLogs(prev => [
+    const updated = game.civs.map((c, i) => ({ ...c, prompt: presets[i % presets.length] }))
+    game.setCivs(updated)
+    game.setPhase('playing')
+    game.setAutoPlay(true)
+    game.setAutoSpeed(1500)
+    game.setLogs(prev => [
       ...prev,
       { turn: 0, message: 'SPECTATOR MODE — All civilizations have been assigned AI strategies.', type: 'system' },
       ...updated.map(c => ({ turn: 0, message: `${c.name}: "${c.prompt.slice(0, 60)}..."`, type: 'system' as const })),
@@ -156,54 +76,21 @@ export default function App() {
   }
 
   function nextTurn() {
-    if (winner) return
-    if (dataSource === 'torii') {
-      syncFromTorii()
-      setLogs(prev => [...prev, { turn, message: 'Syncing on-chain state...', type: 'system' }])
-      return
-    }
-    const newTurn = turn + 1
-    // Snapshot before turn
+    // Record snapshot
     setHistory(prev => [...prev, {
-      turn,
-      civData: civs.map(c => ({ id: c.id, hp: c.hp, food: c.food, territories: c.territories, isAlive: c.isAlive })),
+      turn: game.turn,
+      civData: game.civs.map(c => ({ id: c.id, hp: c.hp, food: c.food, territories: c.territories, isAlive: c.isAlive })),
     }])
-    const result = simulateTurn(civs, grid, newTurn, { foodDrain: settings.foodDrain, eventFrequency: settings.eventFrequency })
-    setCivs(result.civs)
-    setGrid(result.grid)
-    setLogs(prev => [...prev, ...result.logs])
-    setTurn(newTurn)
+
+    const result = game.advanceTurn()
+    if (!result) return
 
     // Record replay frame
-    replay.record({
-      turn: newTurn,
-      civs: result.civs.map(c => ({ ...c })),
-      grid: result.grid.map(row => row.map(t => ({ ...t }))),
-      logs: result.logs,
-    })
+    replay.record(game.getReplayFrame())
 
-    // Track stats
-    setGameStats(prev => {
-      const s = { ...prev, totalTurns: newTurn }
-      for (const log of result.logs) {
-        if (log.type === 'combat') s.combatEvents++
-        if (log.type === 'trade') s.tradeEvents++
-        if (log.type === 'elimination') {
-          const name = log.message.match(/(.+?) has been/)?.[1] || 'Unknown'
-          const civ = result.civs.find(c => c.name === name)
-          s.eliminationOrder = [...s.eliminationOrder, { name, color: civ?.color || '#888', turn: newTurn }]
-        }
-      }
-      for (const c of result.civs) {
-        if (c.hp > s.peakHP.hp) s.peakHP = { name: c.name, color: c.color, hp: c.hp, turn: newTurn }
-        if (c.territories > s.peakTerritories.count) s.peakTerritories = { name: c.name, color: c.color, count: c.territories, turn: newTurn }
-      }
-      return s
-    })
-
-    sound.play(sfxTurn)
-    // Random position for particles (center-ish of viewport)
+    // SFX + particles
     const cx = window.innerWidth / 2, cy = window.innerHeight / 3
+    sound.play(sfxTurn)
     for (const log of result.logs) {
       if (log.type === 'combat') {
         sound.play(sfxAttack)
@@ -216,34 +103,30 @@ export default function App() {
       else if (log.type === 'action' && log.message.includes('Gather')) { sound.play(sfxGather); emit(cx + (Math.random() - 0.5) * 200, cy, 'gather') }
       else if (log.type === 'action' && log.message.includes('Defend')) { sound.play(sfxDefend); emit(cx, cy, 'defend') }
     }
-    const alive = result.civs.filter(c => c.isAlive)
-    if (alive.length <= 1 && result.civs.length > 1) {
-      const w = alive[0] || result.civs[0]
-      setWinner(w)
-      setPhase('ended')
-      setAutoPlay(false)
+
+    // Game over
+    if (game.winner) {
       sound.play(sfxGameOver)
-      emit(window.innerWidth / 2, window.innerHeight / 3, 'elimination')
-      setLogs(prev => [...prev, { turn: newTurn, message: `${w.name} is the last civilization standing!`, type: 'system' }])
-      saveRecord({ winner: w.name, winnerColor: w.color, turns: newTurn, strategy: w.prompt.slice(0, 100) })
+      emit(cx, cy, 'elimination')
+      saveRecord({ winner: game.winner.name, winnerColor: game.winner.color, turns: game.turn, strategy: game.winner.prompt.slice(0, 100) })
     }
   }
 
   function savePrompt() {
-    const updated = [...civs]
-    updated[selectedCiv] = { ...updated[selectedCiv], prompt }
-    setCivs(updated)
-    setLogs(prev => [...prev, { turn, message: `${playerCiv.name} updated their strategy prompt`, type: 'system' }])
+    const updated = [...game.civs]
+    updated[game.selectedCiv] = { ...updated[game.selectedCiv], prompt: game.prompt }
+    game.setCivs(updated)
+    game.setLogs(prev => [...prev, { turn: game.turn, message: `${playerCiv.name} updated their strategy prompt`, type: 'system' }])
   }
 
-  if (phase === 'lobby') {
+  if (game.phase === 'lobby') {
     return (
       <div>
-        <LobbyScreen dataSource={dataSource} onStart={startGame} onSpectate={startSpectate} />
+        <LobbyScreen dataSource={game.dataSource} onStart={startGame} onSpectate={startSpectate} />
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10">
           <GameSettings onApply={(s) => {
-            setSettings(s)
-            setCivs(generateCivs(s.startingHP, s.startingFood))
+            game.setSettings(s)
+            game.setCivs(generateCivs(s.startingHP, s.startingFood))
           }} />
         </div>
       </div>
@@ -253,7 +136,7 @@ export default function App() {
   return (
     <div className={`min-h-screen bg-gray-950 text-white scanline ${combatShake ? 'animate-combat-shake' : ''}`}>
       <TurnBanner turn={displayTurn} />
-      <EventToast logs={logs} />
+      <EventToast logs={game.logs} />
       <ParticleLayer particles={particles} />
       <Leaderboard show={showLeaderboard} onClose={() => setShowLeaderboard(false)} />
 
@@ -266,69 +149,55 @@ export default function App() {
         }}>0xCIV</h1>
         <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap justify-end">
           <span className="hidden sm:flex"><MiniStats civs={displayCivs} turn={displayTurn} /></span>
-          <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded ${dataSource === 'torii' ? 'bg-green-900 text-green-400' : 'bg-yellow-900 text-yellow-400'}`}>
-            {dataSource === 'torii' ? 'ON-CHAIN' : 'MOCK'}
+          <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded ${game.dataSource === 'torii' ? 'bg-green-900 text-green-400' : 'bg-yellow-900 text-yellow-400'}`}>
+            {game.dataSource === 'torii' ? 'ON-CHAIN' : 'MOCK'}
           </span>
-          <span className="text-cyan-400 text-xs sm:text-sm font-mono font-bold">T{turn}</span>
-          <button
-            onClick={sound.toggle}
+          <span className="text-cyan-400 text-xs sm:text-sm font-mono font-bold">T{game.turn}</span>
+          {replay.isReplaying && <span className="text-purple-400 text-[10px] font-bold animate-pulse">REPLAY</span>}
+          <button onClick={sound.toggle}
             className="p-1 sm:px-2 sm:py-1 rounded text-xs border border-gray-700 text-gray-400 hover:border-gray-500 transition-all"
             title={sound.muted ? 'Unmute' : 'Mute'}
-          >
-            {sound.muted ? '🔇' : '🔊'}
-          </button>
+          >{sound.muted ? '🔇' : '🔊'}</button>
           <button
             onClick={async () => {
-              if (walletAddress) {
-                await disconnectWallet()
-                setWalletAddress(null)
-              } else {
-                try {
-                  const acct = await connectWallet()
-                  if (acct?.account) setWalletAddress(acct.account)
-                } catch {}
-              }
+              if (game.walletAddress) { await disconnectWallet(); game.setWalletAddress(null) }
+              else { try { const acct = await connectWallet(); if (acct?.account) game.setWalletAddress(acct.account) } catch {} }
             }}
             className="px-2 sm:px-3 py-1 rounded text-[10px] sm:text-xs font-bold border border-fuchsia-500 text-fuchsia-400 hover:bg-fuchsia-500/10 transition-all"
-          >
-            {walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : '🔗'}
-          </button>
+          >{game.walletAddress ? `${game.walletAddress.slice(0, 6)}...${game.walletAddress.slice(-4)}` : '🔗'}</button>
         </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 p-2 sm:p-4 pb-12">
         {/* Left: Map + Prompt */}
         <div className="lg:w-1/2 space-y-4">
-          <GridMap grid={displayGrid} civs={displayCivs} selectedCiv={selectedCiv} />
+          <GridMap grid={displayGrid} civs={displayCivs} selectedCiv={game.selectedCiv} />
 
           <div className="flex gap-2">
-            {civs.map((c, i) => (
-              <button
-                key={i}
-                onClick={() => { setSelectedCiv(i); setPrompt(c.prompt) }}
+            {displayCivs.map((c, i) => (
+              <button key={i}
+                onClick={() => { game.setSelectedCiv(i); game.setPrompt(c.prompt) }}
                 className={`flex-1 py-2 rounded text-xs font-bold border transition-all ${
-                  selectedCiv === i ? 'scale-105' : 'opacity-50'
+                  game.selectedCiv === i ? 'scale-105' : 'opacity-50'
                 } ${!c.isAlive ? 'line-through opacity-30' : ''}`}
                 style={{ borderColor: c.color, color: c.color }}
-              >
-                {c.name.split(' ')[0]}
-              </button>
+              >{c.name.split(' ')[0]}</button>
             ))}
           </div>
 
           <div className="bg-gray-900/80 rounded-lg border border-gray-700 p-4">
             <label className="text-gray-400 text-sm block mb-2">Strategy Prompt — Tell your AI how to lead</label>
-            <PromptHint civ={playerCiv} allCivs={civs} />
+            <PromptHint civ={playerCiv} allCivs={displayCivs} />
             <div className="flex gap-1 mb-2 flex-wrap">
               {PRESET_STRATEGIES.map(([label, text]) => (
-                <button key={label} onClick={() => setPrompt(text)}
+                <button key={label} onClick={() => game.setPrompt(text)}
                   className="px-2 py-0.5 rounded text-xs bg-gray-800 border border-gray-600 text-gray-400 hover:border-cyan-500 hover:text-cyan-400 transition-all"
                 >{label}</button>
               ))}
             </div>
             <textarea
-              value={prompt}
-              onChange={e => setPrompt(e.target.value)}
+              value={game.prompt}
+              onChange={e => game.setPrompt(e.target.value)}
               placeholder="e.g. Prioritize food. If attacked, retaliate. Never trade with the weakest..."
               className="w-full h-24 bg-gray-800 rounded border border-gray-600 p-3 text-sm text-gray-200 placeholder-gray-600 focus:border-cyan-500 focus:outline-none resize-none font-mono"
             />
@@ -336,54 +205,39 @@ export default function App() {
               <button onClick={savePrompt}
                 className="px-4 py-2 rounded text-sm font-bold bg-gray-800 border border-cyan-500 text-cyan-400 hover:bg-cyan-500/10 transition-all"
               >Save Prompt</button>
-              <button onClick={nextTurn} disabled={!!winner}
+              <button onClick={nextTurn} disabled={!!game.winner}
                 className="flex-1 py-2 rounded text-sm font-bold bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:from-cyan-400 hover:to-fuchsia-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
-              >{dataSource === 'torii' ? '🔄 REFRESH' : '⏩ NEXT TURN'}</button>
-              <AutoPlayToggle
-                enabled={autoPlay}
-                speed={autoSpeed}
-                onToggle={() => setAutoPlay(p => !p)}
-                onSpeedChange={setAutoSpeed}
-              />
+              >{game.dataSource === 'torii' ? '🔄 REFRESH' : '⏩ NEXT TURN'}</button>
+              <AutoPlayToggle enabled={game.autoPlay} speed={game.autoSpeed}
+                onToggle={() => game.setAutoPlay(p => !p)} onSpeedChange={game.setAutoSpeed} />
             </div>
           </div>
         </div>
 
         {/* Right: Resources + Log */}
         <div className="lg:w-1/2 space-y-4">
-          <ActionBar
-            connected={!!walletAddress}
-            civs={displayCivs}
-            selectedCiv={selectedCiv}
-            dataSource={dataSource}
-            onLog={(msg, type) => setLogs(prev => [...prev, { turn, message: msg, type }])}
-          />
+          <ActionBar connected={!!game.walletAddress} civs={displayCivs} selectedCiv={game.selectedCiv}
+            dataSource={game.dataSource}
+            onLog={(msg, type) => game.setLogs(prev => [...prev, { turn: game.turn, message: msg, type }])} />
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            {civs.map(c => <ResourcePanel key={c.id} civ={c} />)}
+            {displayCivs.map(c => <ResourcePanel key={c.id} civ={c} />)}
           </div>
           <TerritoryChart grid={displayGrid} civs={displayCivs} />
           <DiplomacyPanel civs={displayCivs} />
-          <TurnTimeline history={history} civs={displayCivs} currentTurn={turn} />
-          {(winner || replay.isReplaying) && (
-            <ReplayControls
-              isReplaying={replay.isReplaying}
-              replayIndex={replay.replayIndex}
-              totalFrames={replay.totalFrames}
-              onStart={replay.startReplay}
-              onStop={replay.stopReplay}
-              onNext={replay.next}
-              onPrev={replay.prev}
-              onSeek={replay.seekTo}
-            />
+          <TurnTimeline history={history} civs={displayCivs} currentTurn={game.turn} />
+          {(game.winner || replay.isReplaying) && (
+            <ReplayControls isReplaying={replay.isReplaying} replayIndex={replay.replayIndex}
+              totalFrames={replay.totalFrames} onStart={replay.startReplay} onStop={replay.stopReplay}
+              onNext={replay.next} onPrev={replay.prev} onSeek={replay.seekTo} />
           )}
           <div>
             <h3 className="text-gray-500 text-sm mb-2 font-bold">TURN LOG</h3>
-            <TurnLog logs={logs} />
+            <TurnLog logs={game.logs} />
           </div>
         </div>
       </div>
 
-      {winner && !replay.isReplaying && <GameOverOverlay winner={winner} turn={turn} stats={gameStats} />}
+      {game.winner && !replay.isReplaying && <GameOverOverlay winner={game.winner} turn={game.turn} stats={game.gameStats} />}
 
       <div className="fixed bottom-0 left-0 right-0 bg-gray-950/90 border-t border-gray-800 py-2 px-4 flex justify-between items-center text-xs text-gray-600">
         <span>0xCIV — Dojo Game Jam VIII</span>
