@@ -101,6 +101,7 @@ export default function App() {
       if (e.key === 'n' || e.key === 'N') nextTurn()
       if (e.key >= '1' && e.key <= '4') setSelectedCiv(parseInt(e.key) - 1)
       if (e.key === 'a' || e.key === 'A') setAutoPlay(p => !p)
+      if (e.key === 'm' || e.key === 'M') sound.toggle()
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
@@ -323,7 +324,7 @@ export default function App() {
       <div className="fixed bottom-0 left-0 right-0 bg-gray-950/90 border-t border-gray-800 py-2 px-4 flex justify-between items-center text-xs text-gray-600">
         <span>0xCIV — Dojo Game Jam VIII</span>
         <div className="flex gap-4">
-          <span className="hidden sm:inline text-gray-700">N: next turn · 1-4: select civ · A: auto-play</span>
+          <span className="hidden sm:inline text-gray-700">N: next · 1-4: civ · A: auto · M: mute</span>
           <a href="https://github.com/r0ze998/0xciv" target="_blank" rel="noopener" className="text-cyan-600 hover:text-cyan-400">GitHub</a>
         </div>
       </div>

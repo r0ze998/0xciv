@@ -135,7 +135,16 @@ export function simulateTurn(
     } else if (action === 'attack') {
       const targets = alive.filter(t => t.id !== civ.id)
       if (targets.length > 0) {
-        const target = targets[Math.floor(Math.random() * targets.length)]
+        // Smart targeting based on prompt
+        const prompt = c.prompt.toLowerCase()
+        let target: Civilization
+        if (prompt.includes('weakest') || prompt.includes('weak')) {
+          target = [...targets].sort((a, b) => a.hp - b.hp)[0]
+        } else if (prompt.includes('strongest') || prompt.includes('leader')) {
+          target = [...targets].sort((a, b) => b.territories - a.territories)[0]
+        } else {
+          target = targets[Math.floor(Math.random() * targets.length)]
+        }
         const t = newCivs[target.id]
         const dmg = Math.floor(Math.random() * 20) + 5
         t.hp = Math.max(0, t.hp - dmg)
