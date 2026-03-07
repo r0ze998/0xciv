@@ -3,6 +3,8 @@ import { fetchAllOnChainData } from './torii'
 import { connectWallet, disconnectWallet } from './cartridge'
 import { sfxTurn, sfxAttack, sfxGather, sfxDefend, sfxTrade, sfxElimination, sfxGameOver } from './sfx'
 import { GridMap, TurnLog, ResourcePanel, LobbyScreen, GameOverOverlay, AutoPlayToggle, TurnBanner, MiniStats } from './components'
+import { TurnTimeline } from './components/TurnTimeline'
+import type { TurnSnapshot } from './components/TurnTimeline'
 import { PRESET_STRATEGIES } from './lib/constants'
 import { onChainCivToUI, onChainTerritoriesToGrid, gamePhaseToUI, generateGrid, generateCivs, assignStartingTerritories, simulateTurn } from './lib/game-utils'
 import type { Civilization, Territory, Phase, LogEntry } from './types/game'
@@ -21,6 +23,7 @@ export default function App() {
   const [autoPlay, setAutoPlay] = useState(false)
   const [autoSpeed, setAutoSpeed] = useState(1500)
   const [combatShake, setCombatShake] = useState(false)
+  const [history, setHistory] = useState<TurnSnapshot[]>([])
 
   const playerCiv = civs[selectedCiv]
   const autoPlayRef = useRef(autoPlay)
@@ -115,6 +118,11 @@ export default function App() {
       return
     }
     const newTurn = turn + 1
+    // Snapshot before turn
+    setHistory(prev => [...prev, {
+      turn,
+      civData: civs.map(c => ({ id: c.id, hp: c.hp, food: c.food, territories: c.territories, isAlive: c.isAlive })),
+    }])
     const result = simulateTurn(civs, grid, newTurn)
     setCivs(result.civs)
     setGrid(result.grid)
@@ -247,6 +255,7 @@ export default function App() {
           <div className="grid grid-cols-2 gap-3">
             {civs.map(c => <ResourcePanel key={c.id} civ={c} />)}
           </div>
+          <TurnTimeline history={history} civs={civs} currentTurn={turn} />
           <div>
             <h3 className="text-gray-500 text-sm mb-2 font-bold">TURN LOG</h3>
             <TurnLog logs={logs} />
