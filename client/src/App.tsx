@@ -15,6 +15,7 @@ import { GameClock } from './components/GameClock'
 import { QuickTips } from './components/QuickTips'
 import { IntroSequence } from './components/IntroSequence'
 import { MiniMap } from './components/MiniMap'
+import { CivPortrait } from './components/CivPortrait'
 import { ActivityFeed } from './components/ActivityFeed'
 import { ParticleLayer, useParticles } from './components/Particles'
 import { Leaderboard, saveRecord } from './components/Leaderboard'
@@ -199,13 +200,12 @@ export default function App() {
 
           <div className="flex gap-2">
             {displayCivs.map((c, i) => (
-              <button key={i}
+              <CivPortrait
+                key={i}
+                civ={c}
+                isSelected={game.selectedCiv === i}
                 onClick={() => { game.setSelectedCiv(i); game.setPrompt(c.prompt) }}
-                className={`flex-1 py-2 rounded text-xs font-bold border transition-all ${
-                  game.selectedCiv === i ? 'scale-105' : 'opacity-50'
-                } ${!c.isAlive ? 'line-through opacity-30' : ''}`}
-                style={{ borderColor: c.color, color: c.color }}
-              >{c.name.split(' ')[0]}</button>
+              />
             ))}
           </div>
 
