@@ -26,3 +26,58 @@
   pointer-events: none;
   z-index: 100;
 }
+
+/* Fade up animations */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-up { animation: fade-up 0.5s ease-out both; }
+.animate-fade-up-delay-1 { animation: fade-up 0.5s ease-out 0.1s both; }
+.animate-fade-up-delay-2 { animation: fade-up 0.5s ease-out 0.2s both; }
+.animate-fade-up-delay-3 { animation: fade-up 0.5s ease-out 0.3s both; }
+
+/* Log entry slide in */
+@keyframes log-entry {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-log-entry { animation: log-entry 0.3s ease-out both; }
+
+/* Turn banner */
+@keyframes turn-banner {
+  0% { opacity: 0; transform: scale(0.5); }
+  30% { opacity: 1; transform: scale(1.1); }
+  70% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.9); }
+}
+
+.animate-turn-banner { animation: turn-banner 1.5s ease-out both; }
+
+/* Combat shake */
+@keyframes combat-shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 50%, 90% { transform: translateX(-3px); }
+  30%, 70% { transform: translateX(3px); }
+}
+
+.animate-combat-shake { animation: combat-shake 0.4s ease-out; }
+
+/* Capture flash */
+@keyframes capture-flash {
+  0% { box-shadow: inset 0 0 0 0 rgba(255, 255, 255, 0.8); }
+  50% { box-shadow: inset 0 0 20px 5px rgba(255, 255, 255, 0.6); }
+  100% { box-shadow: inset 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+.animate-capture-flash { animation: capture-flash 0.6s ease-out; }
+
+/* Glow pulse for danger indicators */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.animate-glow-pulse { animation: glow-pulse 1s ease-in-out infinite; }
