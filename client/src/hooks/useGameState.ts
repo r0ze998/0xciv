@@ -5,6 +5,8 @@ import type { Civilization, Territory, Phase, LogEntry, GameStats } from '../typ
 import type { Settings } from '../components/GameSettings'
 import { DEFAULT_SETTINGS } from '../components/GameSettings'
 import type { ReplayFrame } from './useReplay'
+import { checkVictory } from '../lib/victory'
+import type { VictoryType } from '../lib/victory'
 
 export function useGameState() {
   const [phase, setPhase] = useState<Phase>('lobby')
@@ -26,6 +28,7 @@ export function useGameState() {
     peakTerritories: { name: '', color: '', count: 0, turn: 0 },
     totalGathered: {},
   })
+  const [victoryType, setVictoryType] = useState<VictoryType>(null)
 
   const autoPlayRef = useRef(autoPlay)
   autoPlayRef.current = autoPlay
@@ -111,13 +114,13 @@ export function useGameState() {
       return s
     })
 
-    const alive = result.civs.filter(c => c.isAlive)
-    if (alive.length <= 1 && result.civs.length > 1) {
-      const w = alive[0] || result.civs[0]
-      setWinner(w)
+    const victory = checkVictory(result.civs, newTurn)
+    if (victory.winner) {
+      setWinner(victory.winner)
+      setVictoryType(victory.type)
       setPhase('ended')
       setAutoPlay(false)
-      setLogs(prev => [...prev, { turn: newTurn, message: `${w.name} is the last civilization standing!`, type: 'system' }])
+      setLogs(prev => [...prev, { turn: newTurn, message: victory.message, type: 'system' }])
       return { logs: result.logs }
     }
 
@@ -152,6 +155,7 @@ export function useGameState() {
     gameStats,
     autoPlayRef,
     syncFromTorii,
+    victoryType,
     advanceTurn,
     getReplayFrame,
   }

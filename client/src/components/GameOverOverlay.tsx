@@ -1,14 +1,17 @@
 import type { Civilization, GameStats } from '../types/game'
 import { ShareCard } from './ShareCard'
+import { VICTORY_ICONS } from '../lib/victory'
+import type { VictoryType } from '../lib/victory'
 
 interface Props {
   winner: Civilization
   turn: number
   stats?: GameStats
   onReplay?: () => void
+  victoryType?: VictoryType
 }
 
-export function GameOverOverlay({ winner, turn, stats, onReplay }: Props) {
+export function GameOverOverlay({ winner, turn, stats, onReplay, victoryType }: Props) {
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm overflow-y-auto py-8">
       <div className="text-center p-6 sm:p-8 rounded-2xl border-2 animate-fade-up max-w-lg mx-4 w-full" style={{
@@ -16,7 +19,9 @@ export function GameOverOverlay({ winner, turn, stats, onReplay }: Props) {
         boxShadow: `0 0 60px ${winner.color}44, 0 0 120px ${winner.color}22`,
         background: `linear-gradient(135deg, rgba(0,0,0,0.95) 0%, ${winner.color}11 100%)`,
       }}>
-        <p className="text-gray-400 text-sm mb-2 tracking-widest">GAME OVER</p>
+        <p className="text-gray-400 text-sm mb-2 tracking-widest">
+          {victoryType ? `${VICTORY_ICONS[victoryType] || ''} ${victoryType?.toUpperCase()} VICTORY` : 'GAME OVER'}
+        </p>
         <h2 className="text-3xl sm:text-5xl font-black mb-2 title-glow" style={{ color: winner.color }}>{winner.name}</h2>
         <p className="text-gray-400 mb-4">Last Civilization Standing — Turn {turn}</p>
 

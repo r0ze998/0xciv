@@ -277,6 +277,7 @@ export default function App() {
 
       {game.winner && !replay.isReplaying && (
         <GameOverOverlay winner={game.winner} turn={game.turn} stats={game.gameStats}
+          victoryType={game.victoryType}
           onReplay={replay.totalFrames > 0 ? replay.startReplay : undefined} />
       )}
 
