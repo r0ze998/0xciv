@@ -5,9 +5,10 @@ interface Props {
   winner: Civilization
   turn: number
   stats?: GameStats
+  onReplay?: () => void
 }
 
-export function GameOverOverlay({ winner, turn, stats }: Props) {
+export function GameOverOverlay({ winner, turn, stats, onReplay }: Props) {
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm overflow-y-auto py-8">
       <div className="text-center p-6 sm:p-8 rounded-2xl border-2 animate-fade-up max-w-lg mx-4 w-full" style={{
@@ -95,12 +96,22 @@ export function GameOverOverlay({ winner, turn, stats }: Props) {
 
         <ShareCard winner={winner} turn={turn} stats={stats} />
 
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-4 px-6 py-3 rounded-lg font-bold bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white hover:scale-105 active:scale-95 transition-all"
-        >
-          Play Again
-        </button>
+        <div className="flex gap-3 mt-4 justify-center">
+          {onReplay && (
+            <button
+              onClick={onReplay}
+              className="px-5 py-3 rounded-lg font-bold border border-purple-500 text-purple-400 hover:bg-purple-500/10 hover:scale-105 active:scale-95 transition-all"
+            >
+              🔄 Watch Replay
+            </button>
+          )}
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 rounded-lg font-bold bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white hover:scale-105 active:scale-95 transition-all"
+          >
+            Play Again
+          </button>
+        </div>
       </div>
     </div>
   )

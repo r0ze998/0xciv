@@ -266,7 +266,10 @@ export default function App() {
         </div>
       </div>
 
-      {game.winner && !replay.isReplaying && <GameOverOverlay winner={game.winner} turn={game.turn} stats={game.gameStats} />}
+      {game.winner && !replay.isReplaying && (
+        <GameOverOverlay winner={game.winner} turn={game.turn} stats={game.gameStats}
+          onReplay={replay.totalFrames > 0 ? replay.startReplay : undefined} />
+      )}
 
       <div className="fixed bottom-0 left-0 right-0 bg-gray-950/90 border-t border-gray-800 py-2 px-4 flex justify-between items-center text-xs text-gray-600">
         <span>0xCIV — Dojo Game Jam VIII</span>
