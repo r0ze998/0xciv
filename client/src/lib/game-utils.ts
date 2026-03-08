@@ -89,27 +89,59 @@ function chooseAction(civ: Civilization, civs: Civilization[]): string {
   const prompt = civ.prompt.toLowerCase()
   const alive = civs.filter(c => c.isAlive && c.id !== civ.id)
 
-  // Prompt-based strategy hints
+  // Safety overrides (always trigger regardless of prompt)
+  if (civ.food < 10) return 'gather' // starvation prevention
+  if (civ.hp < 15) return Math.random() > 0.2 ? 'defend' : 'gather' // death prevention
+
+  // Prompt-based strategy — expanded keyword recognition
   if (prompt) {
-    if (prompt.includes('aggro') || prompt.includes('attack')) {
-      return Math.random() > 0.2 ? 'attack' : 'gather'
-    }
-    if (prompt.includes('turtle') || prompt.includes('defend')) {
-      return Math.random() > 0.3 ? 'defend' : 'gather'
-    }
-    if (prompt.includes('econ') || prompt.includes('gather') || prompt.includes('resource')) {
-      return Math.random() > 0.2 ? 'gather' : 'trade'
-    }
-    if (prompt.includes('chaos') || prompt.includes('random')) {
+    // Score-based approach: accumulate tendency weights
+    let attackW = 0, defendW = 0, gatherW = 0, tradeW = 0
+
+    // Attack keywords
+    if (/aggro|attack|offensive|war|conquer|destroy|kill|crush|invade|raid|assault|fight|military|weapon|arm/.test(prompt)) attackW += 5
+    if (/target.*weak|attack.*weak|kill.*weak/.test(prompt)) attackW += 3
+    if (/target.*strong|attack.*leader|take.*first/.test(prompt)) attackW += 3
+    if (/aggressive|ruthless|no mercy|eliminate|domination|dominate/.test(prompt)) attackW += 4
+
+    // Defend keywords
+    if (/turtle|defend|defensive|protect|fortif|shield|safe|surviv|hunker|hold|wall|guard|heal/.test(prompt)) defendW += 5
+    if (/careful|cautious|conservative|patient|wait|bide/.test(prompt)) defendW += 3
+    if (/if attacked|retaliat|counter/.test(prompt)) { defendW += 3; attackW += 1 }
+
+    // Gather keywords
+    if (/econ|gather|resource|farm|harvest|build|grow|accumulate|hoard|stockpile|food|metal/.test(prompt)) gatherW += 5
+    if (/expand|territory|land|spread|coloniz/.test(prompt)) gatherW += 3
+
+    // Trade keywords
+    if (/trade|diplomacy|diplomat|peace|ally|alliance|cooperat|partner|commerce|exchang/.test(prompt)) tradeW += 5
+    if (/knowledge|research|tech|science|study|learn|enlighten/.test(prompt)) { tradeW += 3; gatherW += 1 }
+
+    // Chaos keywords
+    if (/chaos|random|unpredictable|wild|crazy|yolo/.test(prompt)) {
       return ['gather', 'attack', 'defend', 'trade'][Math.floor(Math.random() * 4)]
+    }
+
+    // Balanced/adaptive keywords
+    if (/balanced|adapt|flexible|smart|strategic|optimal/.test(prompt)) {
+      // Use state-based decisions below
+    } else if (attackW + defendW + gatherW + tradeW > 0) {
+      // Weighted random based on prompt analysis
+      const total = attackW + defendW + gatherW + tradeW
+      const roll = Math.random() * total
+      if (roll < attackW) return alive.length > 0 ? 'attack' : 'gather'
+      if (roll < attackW + defendW) return 'defend'
+      if (roll < attackW + defendW + gatherW) return 'gather'
+      return 'trade'
     }
   }
 
-  // Smart defaults based on state
+  // Smart defaults based on game state
   if (civ.hp < 30) return Math.random() > 0.3 ? 'defend' : 'gather'
-  if (civ.food < 15) return 'gather'
+  if (civ.food < 20) return Math.random() > 0.3 ? 'gather' : 'trade'
   if (civ.territories >= 8 && alive.length > 1) return Math.random() > 0.5 ? 'defend' : 'attack'
   if (civ.metal > 60 && alive.length > 1) return 'attack'
+  if (civ.knowledge > 40) return Math.random() > 0.5 ? 'trade' : 'gather' // research path
 
   return ['gather', 'attack', 'defend', 'trade'][Math.floor(Math.random() * 4)]
 }
