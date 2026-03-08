@@ -19,6 +19,7 @@ import { MiniMap } from './components/MiniMap'
 import { CivPortrait } from './components/CivPortrait'
 import { ActivityFeed } from './components/ActivityFeed'
 import { Tutorial } from './components/Tutorial'
+import { MobileNav } from './components/MobileNav'
 import { ParticleLayer, useParticles } from './components/Particles'
 import { Leaderboard, saveRecord } from './components/Leaderboard'
 import { ActionBar } from './components/ActionBar'
@@ -281,14 +282,31 @@ export default function App() {
           onReplay={replay.totalFrames > 0 ? replay.startReplay : undefined} />
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-950/90 border-t border-gray-800 py-2 px-4 flex justify-between items-center text-xs text-gray-600">
+      <div className="fixed bottom-0 left-0 right-0 bg-gray-950/90 border-t border-gray-800 py-2 px-4 hidden sm:flex justify-between items-center text-xs text-gray-600">
         <span>0xCIV — Dojo Game Jam VIII</span>
         <div className="flex gap-3 items-center">
           <button onClick={() => setShowLeaderboard(true)} className="text-yellow-600 hover:text-yellow-400 transition-all">🏆</button>
-          <span className="hidden sm:inline text-gray-700">N: next · 1-4: civ · A: auto · M: mute</span>
+          <span className="text-gray-700">N: next · 1-4: civ · A: auto · M: mute</span>
           <a href="https://github.com/r0ze998/0xciv" target="_blank" rel="noopener" className="text-cyan-600 hover:text-cyan-400">GitHub</a>
         </div>
       </div>
+      <MobileNav
+        civs={displayCivs}
+        selectedCiv={game.selectedCiv}
+        onSelectCiv={(i) => { game.setSelectedCiv(i); game.setPrompt(displayCivs[i].prompt) }}
+        turn={game.turn}
+        dataSource={game.dataSource}
+        walletAddress={game.walletAddress}
+        onWalletClick={async () => {
+          if (game.walletAddress) { await disconnectWallet(); game.setWalletAddress(null) }
+          else { try { const acct = await connectWallet(); if (acct?.account) game.setWalletAddress(acct.account) } catch {} }
+        }}
+        soundMuted={sound.muted}
+        onSoundToggle={sound.toggle}
+        bgmPlaying={bgm.playing}
+        onBGMToggle={bgm.toggle}
+        onLeaderboard={() => setShowLeaderboard(true)}
+      />
     </div>
   )
 }
