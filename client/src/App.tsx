@@ -14,6 +14,8 @@ import { PowerRanking } from './components/PowerRanking'
 import { GameClock } from './components/GameClock'
 import { QuickTips } from './components/QuickTips'
 import { IntroSequence } from './components/IntroSequence'
+import { MiniMap } from './components/MiniMap'
+import { ActivityFeed } from './components/ActivityFeed'
 import { ParticleLayer, useParticles } from './components/Particles'
 import { Leaderboard, saveRecord } from './components/Leaderboard'
 import { ActionBar } from './components/ActionBar'
@@ -245,6 +247,10 @@ export default function App() {
             {displayCivs.map(c => <ResourcePanel key={c.id} civ={c} />)}
           </div>
           <TerritoryChart grid={displayGrid} civs={displayCivs} />
+          <div className="grid grid-cols-2 gap-2">
+            <MiniMap grid={displayGrid} civs={displayCivs} />
+            <ActivityFeed logs={game.logs} />
+          </div>
           <PowerRanking civs={displayCivs} />
           <DiplomacyPanel civs={displayCivs} />
           <TurnTimeline history={history} civs={displayCivs} currentTurn={game.turn} />
