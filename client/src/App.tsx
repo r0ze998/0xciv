@@ -4,6 +4,7 @@ import { sfxTurn, sfxAttack, sfxGather, sfxDefend, sfxTrade, sfxElimination, sfx
 import { useSound } from './hooks/useSound'
 import { useGameState } from './hooks/useGameState'
 import { useReplay } from './hooks/useReplay'
+import { useBGM } from './hooks/useBGM'
 import { GridMap, TurnLog, ResourcePanel, LobbyScreen, GameOverOverlay, AutoPlayToggle, TurnBanner, MiniStats, TerritoryChart } from './components'
 import { EventToast } from './components/EventToast'
 import { TurnTimeline } from './components/TurnTimeline'
@@ -32,6 +33,7 @@ export default function App() {
   const sound = useSound()
   const { particles, emit } = useParticles()
   const replay = useReplay()
+  const bgm = useBGM()
   const [showLeaderboard, setShowLeaderboard] = useState(false)
   const [combatShake, setCombatShake] = useState(false)
   const [history, setHistory] = useState<TurnSnapshot[]>([])
@@ -181,9 +183,13 @@ export default function App() {
           <span className="text-cyan-400 text-xs sm:text-sm font-mono font-bold">T{game.turn}</span>
           <GameClock isPlaying={game.phase === 'playing' && !game.winner} />
           {replay.isReplaying && <span className="text-purple-400 text-[10px] font-bold animate-pulse">REPLAY</span>}
+          <button onClick={bgm.toggle}
+            className={`p-1 sm:px-2 sm:py-1 rounded text-xs border transition-all ${bgm.playing ? 'border-fuchsia-500 text-fuchsia-400' : 'border-gray-700 text-gray-400 hover:border-gray-500'}`}
+            title={bgm.playing ? 'Stop BGM' : 'Play BGM'}
+          >{bgm.playing ? '🎵' : '🎶'}</button>
           <button onClick={sound.toggle}
             className="p-1 sm:px-2 sm:py-1 rounded text-xs border border-gray-700 text-gray-400 hover:border-gray-500 transition-all"
-            title={sound.muted ? 'Unmute' : 'Mute'}
+            title={sound.muted ? 'Unmute SFX' : 'Mute SFX'}
           >{sound.muted ? '🔇' : '🔊'}</button>
           <button
             onClick={async () => {
