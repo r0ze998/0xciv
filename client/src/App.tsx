@@ -17,6 +17,7 @@ import { IntroSequence } from './components/IntroSequence'
 import { MiniMap } from './components/MiniMap'
 import { CivPortrait } from './components/CivPortrait'
 import { ActivityFeed } from './components/ActivityFeed'
+import { Tutorial } from './components/Tutorial'
 import { ParticleLayer, useParticles } from './components/Particles'
 import { Leaderboard, saveRecord } from './components/Leaderboard'
 import { ActionBar } from './components/ActionBar'
@@ -36,6 +37,7 @@ export default function App() {
   const [history, setHistory] = useState<TurnSnapshot[]>([])
   const [warCry, setWarCry] = useState<{ text: string; color: string } | null>(null)
   const [showIntro, setShowIntro] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
 
   const displayCivs = replay.currentFrame?.civs ?? game.civs
   const displayGrid = replay.currentFrame?.grid ?? game.grid
@@ -145,7 +147,8 @@ export default function App() {
   if (game.phase === 'lobby') {
     return (
       <div>
-        <LobbyScreen dataSource={game.dataSource} onStart={startGame} onSpectate={startSpectate} />
+        <LobbyScreen dataSource={game.dataSource} onStart={startGame} onSpectate={startSpectate} onTutorial={() => setShowTutorial(true)} />
+        {showTutorial && <Tutorial onComplete={() => setShowTutorial(false)} />}
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10">
           <GameSettings onApply={(s) => {
             game.setSettings(s)
