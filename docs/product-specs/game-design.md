@@ -9,12 +9,17 @@ The game IS prompt engineering. Same situation + different prompt = different ou
 Jam theme: "Stop fighting bots — design around them"
 → You don't fight the bot. You tell it HOW to fight.
 
-### Win/Loss Conditions
-- **Win**: Last civilization standing
-- **Elimination** (any triggers instant death):
+### Victory Conditions
+Three paths to victory:
+- **Domination** 🗡️ — Last civilization standing (all others eliminated)
+- **Research** 🔬 — First to reach 150 knowledge (Enlightenment)
+- **Economic** 💰 — First to reach 200 total resources (food + metal + knowledge), available after turn 20
+
+### Elimination Conditions
+Any of these triggers instant elimination:
   - HP reaches 0
   - All territories lost
-  - Food reaches 0
+  - Food reaches 0 (starvation)
 
 ### Core Loop
 1. Player spawns a civilization on the 5×5 grid
@@ -72,20 +77,35 @@ Jam theme: "Stop fighting bots — design around them"
 - Submits transaction to Katana/Starknet
 - One Daydreams agent instance per civilization
 
-### Frontend (React) — Priority: WORKING GAME FIRST
-Must-have (Day 1-2):
-- 5×5 grid map (colored by owner, resource icons)
-- Strategy prompt text editor + submit button
-- "Next Turn" button
+### Frontend (React + Vite + Tailwind CSS)
+Core:
+- 5×5 grid map (colored by owner, resource icons, hover tooltips, adjacency hints)
+- Strategy prompt editor with preset strategies + contextual hints
+- "Next Turn" button + auto-play with speed control
 - Turn log (text feed of actions/results)
-- Resource dashboard (HP, food, metal, knowledge, territories)
-- Game over screen (winner announcement)
+- Resource dashboard per civ (HP, food, metal, knowledge, territories, deltas)
+- Game over screen with victory-type theming + game stats + share card
 
-Nice-to-have (Day 3, if time):
-- Animations (territory capture, attacks)
-- Leaderboard
-- Dark sci-fi theme polish
-- Sound effects
+Visualization:
+- HP timeline (SVG line chart), territory control bar, power ranking
+- Threat matrix / diplomacy panel
+- Particle effects (combat, gathering, elimination)
+- Combat shake, capture flash, event toast notifications
+- Tech tree progression (Stone Age → Enlightened)
+
+Modes:
+- Spectator mode (one-click AI vs AI with preset strategies)
+- Replay system (scrub through game history)
+- Tutorial / how-to-play guide
+- Leaderboard (local win/loss tracking)
+
+Audio:
+- Procedural chiptune BGM via Web Audio API
+- SFX for combat, trade, elimination, turn advance
+
+Mobile:
+- Bottom tab bar navigation + slide-up menu panel
+- Responsive layout across all breakpoints
 
 ### Tech Stack
 - **On-chain**: Dojo Engine (Cairo) on Starknet

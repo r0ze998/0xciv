@@ -32,12 +32,14 @@ Or hit **👁️ SPECTATE** to watch 4 AI civilizations battle with preset strat
 ## ✨ Features
 
 ### Gameplay
-- **Prompt-driven AI** — Strategy prompts influence civilization behavior
+- **Prompt-driven AI** — Strategy prompts influence civilization behavior via weighted keyword analysis
+- **Multiple victory conditions** — Domination (last standing), Research (knowledge threshold), Economic (resource total)
 - **Custom civilization names** — Click to rename, or use name packs (Classic, Warriors, 日本, Sci-Fi)
 - **Difficulty settings** — Casual / Standard / Hardcore
 - **Random events** — Famine, bounty, plague, renaissance every N turns
 - **Knowledge matters** — Improves defense, healing, and trade rates
 - **Smart AI targeting** — "Attack the weakest" in prompt → actually targets lowest HP
+- **Tech tree** — Civilizations progress through ages (Stone → Bronze → Classical → Medieval → Industrial → Enlightened)
 
 ### Visualization
 - **HP Timeline** — SVG line chart tracking health over turns
@@ -47,19 +49,24 @@ Or hit **👁️ SPECTATE** to watch 4 AI civilizations battle with preset strat
 - **Prompt Hints** — Contextual strategy suggestions
 - **Particle Effects** — Emoji particles on combat, gathering, elimination
 - **Combat Shake** — Screen shake on attacks
-- **Animated Grid** — Territory capture flash, hover tooltips, adjacency hints
+- **Animated Grid** — Territory capture flash, hover glow, smart tooltips, adjacency hints
 - **Resource Deltas** — See +/- changes each turn with color coding
-- **Event Toasts** — Floating notifications for important events
+- **Event Toasts** — Animated floating notifications with enter/exit transitions
+- **Power Ranking** — Real-time civilization power comparison
+- **Victory-typed overlays** — Color-themed game over screen per victory type
 
 ### Modes & Controls
 - **Auto-play mode** — Watch at adjustable speed (Fast/Normal/Slow)
-- **Spectator mode** — One-click AI vs AI battles
+- **Spectator mode** — One-click AI vs AI battles with preset strategies
 - **Replay system** — Scrub through game history after game over
 - **Leaderboard** — Local win/loss tracking with stats
 - **Share Card** — Generate & download result image for Twitter/X
 - **On-chain actions** — Direct contract calls via Cartridge Controller
+- **Procedural BGM** — Chiptune ambient music via Web Audio API
 - **Sound Effects** — Web Audio API chiptune SFX with mute toggle
 - **Keyboard Shortcuts** — N: next, 1-4: civ, A: auto-play, M: mute
+- **Mobile-first navigation** — Bottom tab bar + slide-up menu panel
+- **Tutorial** — Interactive how-to-play guide for new players
 
 ## ☠️ Elimination Conditions
 

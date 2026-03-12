@@ -1,73 +1,78 @@
-# React + TypeScript + Vite
+# 0xCIV — Frontend Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript + Vite frontend for the 0xCIV prompt strategy game.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 19** + TypeScript
+- **Vite 7** (build tool)
+- **Tailwind CSS 4** (styling)
+- **@dojoengine/sdk** (on-chain state via Torii)
+- **@cartridge/controller** (wallet connection)
+- **Web Audio API** (procedural BGM + SFX)
 
-## React Compiler
+## Quick Start
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
+# Open http://localhost:5173
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Build
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build    # tsc + vite build → dist/
+npm run preview  # preview production build
 ```
+
+## Project Structure
+
+```
+src/
+├── App.tsx              # Main game orchestrator
+├── main.tsx             # Entry point
+├── App.css / index.css  # Animations & global styles
+├── components/          # UI components (35+)
+│   ├── GridMap.tsx       # 5×5 territory grid
+│   ├── PromptPanel.tsx   # Strategy prompt editor
+│   ├── GameHeader.tsx    # Top bar (turn, wallet, audio)
+│   ├── SidePanel.tsx     # Right panel (stats, logs, replay)
+│   ├── MobileNav.tsx     # Bottom tab bar (mobile)
+│   ├── LobbyScreen.tsx   # Pre-game lobby + name packs
+│   ├── GameOverOverlay   # Victory screen + share card
+│   ├── TurnBanner.tsx    # Turn announcement + war cries
+│   ├── EventToast.tsx    # Animated event notifications
+│   ├── IntroSequence.tsx # Cinematic game start
+│   └── ...              # ResourcePanel, TechTree, DiplomacyPanel, etc.
+├── hooks/               # Custom React hooks
+│   ├── useGameState.ts  # Core game logic + state
+│   ├── useSound.ts      # SFX via Web Audio API
+│   ├── useBGM.ts        # Procedural chiptune music
+│   ├── useReplay.ts     # Game replay system
+│   └── useTurnEffects.ts # Turn-based visual effects
+├── lib/                 # Utilities
+│   ├── constants.ts     # Colors, presets, resource icons
+│   ├── game-utils.ts    # Game logic helpers
+│   ├── victory.ts       # Victory condition checking
+│   └── war-cries.ts     # Random war cry generator
+├── types/game.ts        # TypeScript type definitions
+├── actions.ts           # On-chain action builders
+├── cartridge.ts         # Wallet connection
+├── torii.ts             # Torii SDK setup
+└── sfx.ts               # Sound effect definitions
+```
+
+## Data Modes
+
+- **Torii (on-chain)**: Connects to Torii indexer for real-time on-chain state
+- **Mock**: Runs with simulated game state when Torii is unavailable
+
+## Key Features
+
+- Multiple victory conditions (Domination / Research / Economic)
+- Weighted keyword AI prompt analysis
+- Replay system with scrub controls
+- Procedural chiptune BGM
+- Mobile-first responsive design
+- Animated transitions (toast enter/exit, slide-up nav, victory entrance)
