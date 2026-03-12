@@ -21,7 +21,7 @@ export function TurnBanner({ turn, message, warCry, warCryColor }: Props) {
   useEffect(() => {
     if (!warCry) return
     setShowWarCry(true)
-    const timer = setTimeout(() => setShowWarCry(false), 1200)
+    const timer = setTimeout(() => setShowWarCry(false), 1500)
     return () => clearTimeout(timer)
   }, [warCry])
 

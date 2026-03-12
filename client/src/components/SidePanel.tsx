@@ -41,7 +41,7 @@ export function SidePanel({
   onNext, onPrev, onSeek, onLog,
 }: Props) {
   return (
-    <div className="lg:w-1/2 space-y-4">
+    <div className="lg:w-1/2 space-y-4 pb-16 sm:pb-0">
       <ActionBar connected={walletConnected} civs={civs} selectedCiv={selectedCiv}
         dataSource={dataSource} onLog={onLog} />
       <div className="grid grid-cols-2 gap-2 sm:gap-3">

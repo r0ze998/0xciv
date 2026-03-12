@@ -46,8 +46,8 @@ export function MobileNav({
 
       {/* Slide-up panel */}
       {open && (
-        <div className="fixed inset-0 bg-black/80 z-40" onClick={() => setOpen(false)}>
-          <div className="absolute bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-700 rounded-t-2xl p-4 max-h-[60vh] overflow-y-auto"
+        <div className="fixed inset-0 bg-black/80 z-40 transition-opacity" onClick={() => setOpen(false)}>
+          <div className="absolute bottom-0 left-0 right-0 bg-gray-950 border-t border-gray-700 rounded-t-2xl p-4 max-h-[60vh] overflow-y-auto animate-slide-up"
             onClick={e => e.stopPropagation()}>
             <div className="w-8 h-1 bg-gray-700 rounded-full mx-auto mb-4" />
 

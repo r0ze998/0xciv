@@ -56,7 +56,7 @@ export function GridMap({ grid, civs, selectedCiv }: Props) {
           return (
             <div
               key={`${t.x}-${t.y}`}
-              className={`aspect-square flex flex-col items-center justify-center rounded-md text-lg font-bold transition-all duration-300 cursor-default relative
+              className={`aspect-square flex flex-col items-center justify-center rounded-md text-lg font-bold transition-all duration-300 cursor-default relative grid-cell
                 ${owner ? '' : 'bg-gray-800/40'}
                 ${isSelected ? 'ring-2 ring-white/40 scale-105 z-10' : ''}
                 ${justChanged ? 'animate-cell-capture scale-110 z-10' : ''}
@@ -81,9 +81,9 @@ export function GridMap({ grid, civs, selectedCiv }: Props) {
               {owner && (
                 <span className="absolute bottom-0.5 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: owner.color, opacity: 0.6 }} />
               )}
-              {/* Tooltip on hover */}
+              {/* Tooltip on hover — flip below for top row */}
               {isHovered && (
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 border border-gray-600 rounded px-2 py-0.5 text-[10px] text-gray-300 whitespace-nowrap z-20 shadow-lg">
+                <div className={`absolute left-1/2 -translate-x-1/2 bg-gray-800 border border-gray-600 rounded px-2 py-0.5 text-[10px] text-gray-300 whitespace-nowrap z-20 shadow-lg ${t.y === 0 ? 'top-full mt-1' : '-top-8'}`}>
                   ({t.x},{t.y}) {t.resource}{owner ? ` · ${owner.name}` : ' · unclaimed'}
                 </div>
               )}

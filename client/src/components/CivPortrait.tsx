@@ -18,9 +18,9 @@ export function CivPortrait({ civ, isSelected, onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className={`relative flex-1 rounded-lg border p-2 transition-all ${
+      className={`relative flex-1 rounded-lg border p-2 transition-all duration-300 ${
         isSelected ? 'scale-105 ring-1' : 'opacity-60 hover:opacity-80'
-      } ${isDead ? 'opacity-20 grayscale' : ''} ${isLow && !isDead ? 'animate-pulse' : ''}`}
+      } ${isDead ? 'opacity-20 grayscale' : ''} ${isLow && !isDead ? 'animate-danger-pulse' : ''}`}
       style={{
         borderColor: civ.color,
         boxShadow: isSelected ? `0 0 20px ${civ.color}33, inset 0 0 10px ${civ.color}11` : 'none',

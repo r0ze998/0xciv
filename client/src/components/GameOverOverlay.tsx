@@ -1,6 +1,6 @@
 import type { Civilization, GameStats } from '../types/game'
 import { ShareCard } from './ShareCard'
-import { VICTORY_ICONS } from '../lib/victory'
+import { VICTORY_ICONS, VICTORY_COLORS } from '../lib/victory'
 import type { VictoryType } from '../lib/victory'
 
 interface Props {
@@ -12,14 +12,16 @@ interface Props {
 }
 
 export function GameOverOverlay({ winner, turn, stats, onReplay, victoryType }: Props) {
+  const accentColor = (victoryType && VICTORY_COLORS[victoryType]) || winner.color
+
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm overflow-y-auto py-8">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-victory-entrance overflow-y-auto py-8">
       <div className="text-center p-6 sm:p-8 rounded-2xl border-2 animate-fade-up max-w-lg mx-4 w-full" style={{
-        borderColor: winner.color,
-        boxShadow: `0 0 60px ${winner.color}44, 0 0 120px ${winner.color}22`,
-        background: `linear-gradient(135deg, rgba(0,0,0,0.95) 0%, ${winner.color}11 100%)`,
+        borderColor: accentColor,
+        boxShadow: `0 0 60px ${accentColor}44, 0 0 120px ${accentColor}22`,
+        background: `linear-gradient(135deg, rgba(0,0,0,0.95) 0%, ${accentColor}11 100%)`,
       }}>
-        <p className="text-gray-400 text-sm mb-2 tracking-widest">
+        <p className="text-sm mb-2 tracking-widest" style={{ color: `${accentColor}cc` }}>
           {victoryType ? `${VICTORY_ICONS[victoryType] || ''} ${victoryType?.toUpperCase()} VICTORY` : 'GAME OVER'}
         </p>
         <h2 className="text-3xl sm:text-5xl font-black mb-2 title-glow" style={{ color: winner.color }}>{winner.name}</h2>

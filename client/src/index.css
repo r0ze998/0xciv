@@ -46,6 +46,14 @@
 
 .animate-log-entry { animation: log-entry 0.3s ease-out both; }
 
+/* Toast exit */
+@keyframes toast-exit {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(20px); }
+}
+
+.animate-toast-exit { animation: toast-exit 0.3s ease-in forwards; }
+
 /* Turn banner */
 @keyframes turn-banner {
   0% { opacity: 0; transform: scale(0.5); }
@@ -81,3 +89,32 @@
 }
 
 .animate-glow-pulse { animation: glow-pulse 1s ease-in-out infinite; }
+
+/* Subtle danger pulse */
+@keyframes danger-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-danger-pulse { animation: danger-pulse 2s ease-in-out infinite; }
+
+/* Mobile slide-up panel */
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slide-up { animation: slide-up 0.3s ease-out; }
+
+/* Victory overlay entrance */
+@keyframes victory-entrance {
+  0% { opacity: 0; backdrop-filter: blur(0px); }
+  100% { opacity: 1; backdrop-filter: blur(4px); }
+}
+
+.animate-victory-entrance { animation: victory-entrance 0.6s ease-out both; }
+
+/* Grid cell hover glow */
+.grid-cell:hover {
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.08);
+}
