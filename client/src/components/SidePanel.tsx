@@ -41,7 +41,7 @@ export function SidePanel({
   onNext, onPrev, onSeek, onLog,
 }: Props) {
   return (
-    <div className="lg:w-1/2 space-y-4 pb-16 sm:pb-0">
+    <div className="lg:w-1/2 space-y-3 pb-16 sm:pb-0">
       <ActionBar connected={walletConnected} civs={civs} selectedCiv={selectedCiv}
         dataSource={dataSource} onLog={onLog} />
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
@@ -61,7 +61,8 @@ export function SidePanel({
           onNext={onNext} onPrev={onPrev} onSeek={onSeek} />
       )}
       <div>
-        <h3 className="text-gray-500 text-sm mb-2 font-bold">TURN LOG</h3>
+        <h3 className="text-[9px] mb-2 font-bold tracking-[0.2em]"
+          style={{ color: 'var(--c-text-dim)', fontFamily: 'var(--font-display)' }}>TURN_LOG</h3>
         <TurnLog logs={logs} />
       </div>
     </div>

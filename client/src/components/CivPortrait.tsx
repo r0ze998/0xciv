@@ -18,33 +18,40 @@ export function CivPortrait({ civ, isSelected, onClick }: Props) {
   return (
     <button
       onClick={onClick}
-      className={`relative flex-1 rounded-lg border p-2 transition-all duration-300 ${
-        isSelected ? 'scale-105 ring-1' : 'opacity-60 hover:opacity-80'
-      } ${isDead ? 'opacity-20 grayscale' : ''} ${isLow && !isDead ? 'animate-danger-pulse' : ''}`}
+      className={`relative flex-1 border p-2 transition-all duration-300 hex-clip ${
+        isSelected ? 'scale-105' : 'opacity-50 hover:opacity-80'
+      } ${isDead ? 'opacity-15 grayscale' : ''} ${isLow && !isDead ? 'animate-danger-pulse' : ''}`}
       style={{
-        borderColor: civ.color,
-        boxShadow: isSelected ? `0 0 20px ${civ.color}33, inset 0 0 10px ${civ.color}11` : 'none',
+        borderColor: isSelected ? civ.color : `${civ.color}44`,
+        boxShadow: isSelected ? `0 0 25px ${civ.color}33, inset 0 0 15px ${civ.color}11` : 'none',
+        backgroundColor: isSelected ? `${civ.color}0a` : 'var(--c-surface)',
       }}
     >
       {/* HP bar */}
-      <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-lg overflow-hidden bg-gray-800">
+      <div className="absolute top-0 left-0 right-0 h-0.5 overflow-hidden" style={{ backgroundColor: 'var(--c-bg)' }}>
         <div
           className="h-full transition-all duration-500"
           style={{
             width: `${hpPercent}%`,
-            backgroundColor: hpPercent > 50 ? civ.color : hpPercent > 25 ? '#f59e0b' : '#ef4444',
+            backgroundColor: hpPercent > 50 ? civ.color : hpPercent > 25 ? 'var(--c-warning)' : 'var(--c-danger)',
+            boxShadow: `0 0 4px ${hpPercent > 50 ? civ.color : hpPercent > 25 ? 'var(--c-warning)' : 'var(--c-danger)'}`,
           }}
         />
       </div>
 
       <div className="flex items-center gap-1.5">
-        <span className="text-lg">{isDead ? '💀' : techLevel >= 5 ? '👑' : techLevel >= 3 ? '⚔️' : '🏠'}</span>
+        <span className="text-lg">{isDead ? '&#9760;' : techLevel >= 5 ? '&#9813;' : techLevel >= 3 ? '&#9876;' : '&#8962;'}</span>
         <div className="text-left min-w-0">
-          <p className="text-[11px] font-bold truncate" style={{ color: civ.color }}>
+          <p className="text-[10px] font-bold truncate" style={{
+            color: civ.color,
+            fontFamily: 'var(--font-display)',
+            letterSpacing: '0.05em',
+            textShadow: isSelected ? `0 0 6px ${civ.color}44` : 'none',
+          }}>
             {civ.name.split(' ')[0]}
           </p>
-          <p className="text-[8px] text-gray-600">
-            {isDead ? 'ELIMINATED' : RANK_LABELS[techLevel] || 'Nomadic'}
+          <p className="text-[7px] tracking-wider" style={{ color: 'var(--c-text-muted)', fontFamily: 'var(--font-display)' }}>
+            {isDead ? 'OFFLINE' : RANK_LABELS[techLevel] || 'Nomadic'}
           </p>
         </div>
       </div>

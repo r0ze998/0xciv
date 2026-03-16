@@ -22,50 +22,63 @@ export function ActionBar({ connected, civs, selectedCiv, dataSource, onLog }: P
     setLoading(name)
     try {
       await fn()
-      onLog(`⛓️ ${name} transaction sent!`, 'action')
+      onLog(`> ${name} transaction sent`, 'action')
     } catch (err: any) {
-      onLog(`❌ ${name} failed: ${err.message?.slice(0, 60) || 'Unknown error'}`, 'system')
+      onLog(`> ERR: ${name} failed: ${err.message?.slice(0, 60) || 'Unknown error'}`, 'system')
     } finally {
       setLoading(null)
     }
   }
 
+  const btnStyle = (color: string) => ({
+    borderColor: `${color}55`,
+    color: color,
+    fontFamily: 'var(--font-display)',
+    letterSpacing: '0.08em',
+    fontSize: '9px',
+  })
+
   return (
-    <div className="bg-gray-900/80 rounded-lg border border-fuchsia-500/30 p-3">
-      <h3 className="text-fuchsia-400 text-xs font-bold mb-2 tracking-wider flex items-center gap-1">
-        ⛓️ ON-CHAIN ACTIONS
+    <div className="rounded border p-3" style={{ backgroundColor: 'var(--c-surface)', borderColor: `var(--c-secondary)33` }}>
+      <h3 className="text-[9px] font-bold mb-2 tracking-[0.2em] neon-cyan"
+        style={{ fontFamily: 'var(--font-display)' }}>
+        ON-CHAIN_ACTIONS
       </h3>
       <div className="flex flex-wrap gap-1.5">
         <button
           onClick={() => exec('Create Game', executeCreateGame)}
           disabled={!!loading}
-          className="px-2 py-1 rounded text-[10px] font-bold border border-purple-500/50 text-purple-400 hover:bg-purple-500/10 disabled:opacity-30 transition-all"
+          className="px-2 py-1 border disabled:opacity-30 transition-all hover:scale-105"
+          style={btnStyle('var(--c-purple)')}
         >
-          {loading === 'Create Game' ? '⏳' : '🌍'} Create Game
+          {loading === 'Create Game' ? '...' : 'CREATE_GAME'}
         </button>
         <button
           onClick={() => exec('Spawn Civ', executeSpawnCivilization)}
           disabled={!!loading}
-          className="px-2 py-1 rounded text-[10px] font-bold border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 disabled:opacity-30 transition-all"
+          className="px-2 py-1 border disabled:opacity-30 transition-all hover:scale-105"
+          style={btnStyle('var(--c-secondary)')}
         >
-          {loading === 'Spawn Civ' ? '⏳' : '🏛️'} Spawn Civ
+          {loading === 'Spawn Civ' ? '...' : 'SPAWN_CIV'}
         </button>
 
-        <div className="w-full border-t border-gray-800 my-1" />
+        <div className="w-full border-t my-1" style={{ borderColor: 'var(--c-border)' }} />
 
         <button
           onClick={() => exec('Gather', executeGather)}
           disabled={!!loading}
-          className="px-2 py-1 rounded text-[10px] font-bold border border-green-500/50 text-green-400 hover:bg-green-500/10 disabled:opacity-30 transition-all"
+          className="px-2 py-1 border disabled:opacity-30 transition-all hover:scale-105"
+          style={btnStyle('var(--c-primary)')}
         >
-          {loading === 'Gather' ? '⏳' : '🍞'} Gather
+          {loading === 'Gather' ? '...' : 'GATHER'}
         </button>
         <button
           onClick={() => exec('Defend', executeDefend)}
           disabled={!!loading}
-          className="px-2 py-1 rounded text-[10px] font-bold border border-blue-500/50 text-blue-400 hover:bg-blue-500/10 disabled:opacity-30 transition-all"
+          className="px-2 py-1 border disabled:opacity-30 transition-all hover:scale-105"
+          style={btnStyle('var(--c-secondary)')}
         >
-          {loading === 'Defend' ? '⏳' : '🛡️'} Defend
+          {loading === 'Defend' ? '...' : 'DEFEND'}
         </button>
 
         {enemies.length > 0 && (
@@ -73,7 +86,8 @@ export function ActionBar({ connected, civs, selectedCiv, dataSource, onLog }: P
             <select
               value={attackTarget}
               onChange={e => setAttackTarget(Number(e.target.value))}
-              className="bg-gray-800 border border-gray-700 rounded text-[10px] text-gray-400 px-1 py-1"
+              className="border px-1 py-1 text-[9px]"
+              style={{ backgroundColor: 'var(--c-bg)', borderColor: 'var(--c-border)', color: 'var(--c-text-dim)' }}
             >
               {enemies.map(c => (
                 <option key={c.id} value={c.id + 1}>#{c.id + 1} {c.name.split(' ')[0]}</option>
@@ -82,9 +96,10 @@ export function ActionBar({ connected, civs, selectedCiv, dataSource, onLog }: P
             <button
               onClick={() => exec('Attack', () => executeAttack(attackTarget || enemies[0].id + 1))}
               disabled={!!loading}
-              className="px-2 py-1 rounded text-[10px] font-bold border border-red-500/50 text-red-400 hover:bg-red-500/10 disabled:opacity-30 transition-all"
+              className="px-2 py-1 border disabled:opacity-30 transition-all hover:scale-105"
+              style={btnStyle('var(--c-danger)')}
             >
-              {loading === 'Attack' ? '⏳' : '⚔️'} Attack
+              {loading === 'Attack' ? '...' : 'ATTACK'}
             </button>
           </div>
         )}
@@ -92,9 +107,10 @@ export function ActionBar({ connected, civs, selectedCiv, dataSource, onLog }: P
         <button
           onClick={() => exec('Advance Turn', executeAdvanceTurn)}
           disabled={!!loading}
-          className="px-2 py-1 rounded text-[10px] font-bold border border-fuchsia-500/50 text-fuchsia-400 hover:bg-fuchsia-500/10 disabled:opacity-30 transition-all"
+          className="px-2 py-1 border disabled:opacity-30 transition-all hover:scale-105"
+          style={btnStyle('var(--c-purple)')}
         >
-          {loading === 'Advance Turn' ? '⏳' : '⏩'} Advance Turn
+          {loading === 'Advance Turn' ? '...' : 'ADVANCE_TURN'}
         </button>
       </div>
     </div>

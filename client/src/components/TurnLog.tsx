@@ -1,12 +1,12 @@
 import { useRef, useEffect } from 'react'
 import type { LogEntry } from '../types/game'
 
-const TYPE_STYLE: Record<string, { color: string; icon: string }> = {
-  action: { color: 'text-gray-300', icon: '⚡' },
-  combat: { color: 'text-red-400', icon: '⚔️' },
-  trade: { color: 'text-blue-400', icon: '🤝' },
-  elimination: { color: 'text-yellow-400', icon: '☠️' },
-  system: { color: 'text-purple-400', icon: '📡' },
+const TYPE_STYLE: Record<string, { color: string; prefix: string }> = {
+  action: { color: 'var(--c-text-dim)', prefix: 'ACT' },
+  combat: { color: 'var(--c-danger)', prefix: 'ATK' },
+  trade: { color: 'var(--c-secondary)', prefix: 'TRD' },
+  elimination: { color: 'var(--c-warning)', prefix: 'KIA' },
+  system: { color: 'var(--c-purple)', prefix: 'SYS' },
 }
 
 export function TurnLog({ logs }: { logs: LogEntry[] }) {
@@ -14,14 +14,22 @@ export function TurnLog({ logs }: { logs: LogEntry[] }) {
   useEffect(() => { ref.current?.scrollTo(0, ref.current.scrollHeight) }, [logs])
 
   return (
-    <div ref={ref} className="h-64 overflow-y-auto bg-gray-900/80 rounded-lg border border-gray-700 p-3 font-mono text-xs space-y-1">
-      {logs.length === 0 && <p className="text-gray-600 italic">Waiting for first turn...</p>}
+    <div ref={ref} className="h-64 overflow-y-auto rounded border p-3 text-xs space-y-0.5 data-stream-bg"
+      style={{
+        backgroundColor: 'var(--c-surface)',
+        borderColor: 'var(--c-border)',
+        fontFamily: 'var(--font-mono)',
+      }}>
+      {logs.length === 0 && <p className="italic" style={{ color: 'var(--c-text-muted)' }}>&gt; awaiting first turn...</p>}
       {logs.map((log, i) => {
-        const s = TYPE_STYLE[log.type] || { color: 'text-gray-400', icon: '•' }
+        const s = TYPE_STYLE[log.type] || { color: 'var(--c-text-dim)', prefix: '---' }
         const isRecent = i >= logs.length - 6
         return (
-          <div key={i} className={`${s.color} ${isRecent ? 'animate-log-entry' : ''} ${log.type === 'elimination' ? 'font-bold' : ''}`}>
-            <span className="text-gray-600">[T{log.turn}]</span> {s.icon} {log.message}
+          <div key={i} className={`${isRecent ? 'animate-log-entry' : ''} ${log.type === 'elimination' ? 'font-bold' : ''}`}
+            style={{ color: s.color }}>
+            <span style={{ color: 'var(--c-text-muted)' }}>[T{log.turn}]</span>{' '}
+            <span className="text-[9px]" style={{ opacity: 0.6 }}>{s.prefix}</span>{' '}
+            {log.message}
           </div>
         )
       })}

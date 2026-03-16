@@ -44,7 +44,8 @@ export function GridMap({ grid, civs, selectedCiv }: Props) {
   }
 
   return (
-    <div className="bg-gray-900/80 rounded-lg border border-gray-700 p-3">
+    <div className="rounded border p-3 corner-deco"
+      style={{ backgroundColor: 'var(--c-surface)', borderColor: 'var(--c-border)' }}>
       <div className="grid grid-cols-5 gap-1.5">
         {grid.flat().map((t) => {
           const owner = t.owner !== null ? civs[t.owner] : null
@@ -56,22 +57,21 @@ export function GridMap({ grid, civs, selectedCiv }: Props) {
           return (
             <div
               key={`${t.x}-${t.y}`}
-              className={`aspect-square flex flex-col items-center justify-center rounded-md text-lg font-bold transition-all duration-300 cursor-default relative grid-cell
-                ${owner ? '' : 'bg-gray-800/40'}
-                ${isSelected ? 'ring-2 ring-white/40 scale-105 z-10' : ''}
-                ${justChanged ? 'animate-cell-capture scale-110 z-10' : ''}
-                ${adjacent ? 'ring-1 ring-dashed ring-white/10' : ''}
+              className={`aspect-square flex flex-col items-center justify-center text-lg font-bold transition-all duration-300 cursor-default relative grid-cell hex-clip
+                ${isSelected ? 'scale-105 z-10' : ''}
+                ${justChanged ? 'animate-capture-flash scale-110 z-10' : ''}
               `}
               style={{
-                backgroundColor: owner ? `${owner.color}18` : undefined,
+                backgroundColor: owner ? `${owner.color}12` : 'var(--c-surface-alt)',
                 borderWidth: 1,
-                borderColor: owner ? `${owner.color}${isSelected ? 'cc' : '66'}` : adjacent ? '#ffffff15' : '#1f2937',
+                borderStyle: 'solid',
+                borderColor: owner ? `${owner.color}${isSelected ? 'cc' : '44'}` : adjacent ? '#ffffff10' : 'var(--c-border)',
                 boxShadow: owner
                   ? justChanged
-                    ? `0 0 24px ${owner.color}66, inset 0 0 12px ${owner.color}33`
+                    ? `0 0 30px ${owner.color}55, inset 0 0 15px ${owner.color}25`
                     : isSelected
-                      ? `0 0 16px ${owner.color}44, inset 0 0 8px ${owner.color}22`
-                      : `0 0 6px ${owner.color}22`
+                      ? `0 0 20px ${owner.color}33, inset 0 0 10px ${owner.color}15`
+                      : `0 0 4px ${owner.color}15`
                   : 'none',
               }}
               onMouseEnter={() => setHoveredCell(`${t.x}-${t.y}`)}
@@ -79,12 +79,17 @@ export function GridMap({ grid, civs, selectedCiv }: Props) {
             >
               <span className="text-sm select-none">{RESOURCE_ICONS[t.resource]}</span>
               {owner && (
-                <span className="absolute bottom-0.5 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: owner.color, opacity: 0.6 }} />
+                <span className="absolute bottom-0.5 right-1 w-1.5 h-1.5 rounded-full" style={{
+                  backgroundColor: owner.color,
+                  opacity: 0.7,
+                  boxShadow: `0 0 4px ${owner.color}`,
+                }} />
               )}
               {/* Tooltip on hover — flip below for top row */}
               {isHovered && (
-                <div className={`absolute left-1/2 -translate-x-1/2 bg-gray-800 border border-gray-600 rounded px-2 py-0.5 text-[10px] text-gray-300 whitespace-nowrap z-20 shadow-lg ${t.y === 0 ? 'top-full mt-1' : '-top-8'}`}>
-                  ({t.x},{t.y}) {t.resource}{owner ? ` · ${owner.name}` : ' · unclaimed'}
+                <div className={`absolute left-1/2 -translate-x-1/2 border px-2 py-0.5 text-[9px] whitespace-nowrap z-20 ${t.y === 0 ? 'top-full mt-1' : '-top-8'}`}
+                  style={{ backgroundColor: 'var(--c-surface)', borderColor: 'var(--c-border-bright)', color: 'var(--c-text-dim)', fontFamily: 'var(--font-mono)' }}>
+                  [{t.x},{t.y}] {t.resource}{owner ? ` :: ${owner.name}` : ' :: unclaimed'}
                 </div>
               )}
             </div>
@@ -93,12 +98,16 @@ export function GridMap({ grid, civs, selectedCiv }: Props) {
       </div>
 
       {/* Legend */}
-      <div className="flex justify-center gap-4 pt-2 mt-1 border-t border-gray-800">
+      <div className="flex justify-center gap-4 pt-2 mt-1 border-t" style={{ borderColor: 'var(--c-border)' }}>
         {civs.map((c) => {
           const count = grid.flat().filter(t => t.owner === c.id).length
           return (
-            <span key={c.id} className={`text-xs flex items-center gap-1.5 transition-all ${!c.isAlive ? 'opacity-30 line-through' : ''} ${c.id === selectedCiv ? 'font-bold' : ''}`}>
-              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: c.color, boxShadow: c.id === selectedCiv ? `0 0 6px ${c.color}` : 'none' }} />
+            <span key={c.id} className={`text-[10px] flex items-center gap-1.5 transition-all ${!c.isAlive ? 'opacity-20 line-through' : ''} ${c.id === selectedCiv ? 'font-bold' : ''}`}
+              style={{ fontFamily: 'var(--font-mono)' }}>
+              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{
+                backgroundColor: c.color,
+                boxShadow: c.id === selectedCiv ? `0 0 8px ${c.color}` : 'none',
+              }} />
               <span style={{ color: c.color }}>{count}</span>
             </span>
           )

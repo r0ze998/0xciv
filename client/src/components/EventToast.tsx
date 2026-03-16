@@ -11,10 +11,10 @@ interface Toast {
   exiting: boolean
 }
 
-const TYPE_CONFIG: Record<string, { bg: string; border: string; icon: string }> = {
-  combat: { bg: 'bg-red-950/90', border: 'border-red-500/50', icon: '⚔️' },
-  elimination: { bg: 'bg-yellow-950/90', border: 'border-yellow-500/50', icon: '☠️' },
-  trade: { bg: 'bg-blue-950/90', border: 'border-blue-500/50', icon: '🤝' },
+const TYPE_CONFIG: Record<string, { border: string; prefix: string }> = {
+  combat: { border: 'var(--c-danger)', prefix: 'ATK' },
+  elimination: { border: 'var(--c-warning)', prefix: 'KIA' },
+  trade: { border: 'var(--c-secondary)', prefix: 'TRD' },
 }
 
 export function EventToast({ logs }: Props) {
@@ -54,10 +54,18 @@ export function EventToast({ logs }: Props) {
   return (
     <div className="fixed top-16 right-2 sm:right-4 z-30 space-y-2 max-w-[calc(100vw-1rem)] sm:max-w-xs">
       {toasts.map(({ id, log, exiting }) => {
-        const cfg = TYPE_CONFIG[log.type] || { bg: 'bg-gray-900', border: 'border-gray-700', icon: '📡' }
+        const cfg = TYPE_CONFIG[log.type] || { border: 'var(--c-border)', prefix: 'SYS' }
         return (
-          <div key={id} className={`${cfg.bg} border ${cfg.border} rounded-lg px-3 py-2 text-xs text-white shadow-lg backdrop-blur-sm ${exiting ? 'animate-toast-exit' : 'animate-log-entry'}`}>
-            {cfg.icon} {log.message}
+          <div key={id}
+            className={`border px-3 py-2 text-[10px] backdrop-blur-sm ${exiting ? 'animate-toast-exit' : 'animate-log-entry'}`}
+            style={{
+              backgroundColor: 'rgba(10, 10, 15, 0.92)',
+              borderColor: cfg.border,
+              color: cfg.border,
+              boxShadow: `0 0 12px ${cfg.border}22`,
+              fontFamily: 'var(--font-mono)',
+            }}>
+            <span className="text-[8px] opacity-60 tracking-wider">{cfg.prefix}</span> {log.message}
           </div>
         )
       })}

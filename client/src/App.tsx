@@ -135,7 +135,8 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen bg-gray-950 text-white scanline ${effects.combatShake ? 'animate-combat-shake' : ''}`}>
+    <div className={`min-h-screen text-[var(--c-text)] scanline crt-lines ${effects.combatShake ? 'animate-combat-shake' : ''}`}
+      style={{ backgroundColor: 'var(--c-bg)', fontFamily: 'var(--font-body)' }}>
       <TurnBanner turn={displayTurn} warCry={effects.warCry?.text} warCryColor={effects.warCry?.color} />
       <EventToast logs={game.logs} />
       <ParticleLayer particles={particles} />
@@ -152,7 +153,7 @@ export default function App() {
 
       <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 p-2 sm:p-4 pb-12">
         {/* Left: Map + Prompt */}
-        <div className="lg:w-1/2 space-y-4">
+        <div className="lg:w-1/2 space-y-3">
           <QuickTips />
           <GridMap grid={displayGrid} civs={displayCivs} selectedCiv={game.selectedCiv} />
 
@@ -193,12 +194,13 @@ export default function App() {
       )}
 
       {/* Desktop footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gray-950/90 border-t border-gray-800 py-2 px-4 hidden sm:flex justify-between items-center text-xs text-gray-600">
-        <span>0xCIV — Dojo Game Jam VIII</span>
+      <div className="fixed bottom-0 left-0 right-0 py-2 px-4 hidden sm:flex justify-between items-center text-xs border-t h-scan-line"
+        style={{ backgroundColor: 'rgba(10,10,15,0.97)', borderColor: 'var(--c-border)', fontFamily: 'var(--font-mono)' }}>
+        <span className="neon-green text-[10px] tracking-widest" style={{ fontFamily: 'var(--font-display)' }}>0xCIV</span>
         <div className="flex gap-3 items-center">
-          <button onClick={() => setShowLeaderboard(true)} className="text-yellow-600 hover:text-yellow-400 transition-all">🏆</button>
-          <span className="text-gray-700">N: next · 1-4: civ · A: auto · M: mute</span>
-          <a href="https://github.com/r0ze998/0xciv" target="_blank" rel="noopener" className="text-cyan-600 hover:text-cyan-400">GitHub</a>
+          <button onClick={() => setShowLeaderboard(true)} className="hover:scale-110 transition-transform neon-cyan">&#9812;</button>
+          <span style={{ color: 'var(--c-text-muted)' }}>[N]ext [1-4]civ [A]uto [M]ute</span>
+          <a href="https://github.com/r0ze998/0xciv" target="_blank" rel="noopener" className="hover:underline neon-green">src://github</a>
         </div>
       </div>
 
