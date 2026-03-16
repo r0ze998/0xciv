@@ -48,6 +48,12 @@ AIシビライゼーション戦略ゲーム on Starknet（Dojo Game Jam VIII）
 - Client: `npm run build` パス必須
 - PRマージ前にCI全パス
 
+### フロントエンドデザイン
+→ [docs/references/frontend-design.md](./docs/references/frontend-design.md)
+- AIっぽいダサいUI禁止（Inter/Roboto/Arial禁止、紫グラデ on 白禁止）
+- 大胆な方向性を選んで振り切る（サイバーパンク路線を維持）
+- タイポグラフィ、モーション、レイアウトの3点を毎回意識
+
 ### ドキュメント
 - コードを変えたら関連ドキュメントも更新する
 - AGENTS.mdは目次のみ — 仕様の詳細はdocs/に書く
