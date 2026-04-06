@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { fetchAllOnChainData } from '../torii'
 import type { VictoryType } from '../torii'
-import { onChainCivToUI, onChainTerritoriesToGrid, gamePhaseToUI, generateGrid, generateCivs, assignStartingTerritories } from '../lib/game-utils'
+import { onChainCivToUI, onChainTerritoriesToGrid, gamePhaseToUI, generateGrid, generateCivs, assignStartingTerritories, simulateTurn } from '../lib/game-utils'
 import type { Civilization, Territory, Phase, LogEntry, GameStats } from '../types/game'
 import type { Settings } from '../components/GameSettings'
 import { DEFAULT_SETTINGS } from '../components/GameSettings'
 import type { ReplayFrame } from './useReplay'
 import { executeAdvanceTurn } from '../actions'
+import { checkVictory } from '../lib/victory'
 
 export function useGameState() {
   const [phase, setPhase] = useState<Phase>('lobby')
@@ -34,12 +35,15 @@ export function useGameState() {
   autoPlayRef.current = autoPlay
 
   const syncFromTorii = useCallback(async () => {
+    // Don't sync if already in mock mode — let local state drive
+    if (dataSource === 'mock') return
+
     try {
       const { gameState, civs: onChainCivs, territories, events } = await fetchAllOnChainData(1)
       if (!gameState || onChainCivs.length === 0) {
         if (dataSource === 'loading') {
           setDataSource('mock')
-          setLogs(prev => [...prev, { turn: 0, message: 'No on-chain game found. Waiting for game creation...', type: 'system' }])
+          setLogs(prev => [...prev, { turn: 0, message: 'No on-chain game found. Using local simulation.', type: 'system' }])
         }
         return
       }
@@ -132,23 +136,59 @@ export function useGameState() {
     return () => clearInterval(interval)
   }, [syncFromTorii])
 
-  async function advanceTurn(): Promise<{ logs: LogEntry[] } | null> {
+  function advanceTurn(): { logs: LogEntry[] } | null {
     if (winner) return null
 
-    try {
-      // Call on-chain advance_turn
-      await executeAdvanceTurn()
-      // Wait briefly for Torii to index, then sync
-      await new Promise(resolve => setTimeout(resolve, 500))
-      await syncFromTorii()
+    if (dataSource === 'torii') {
+      // On-chain mode: call contract and sync
+      executeAdvanceTurn()
+        .then(() => new Promise(resolve => setTimeout(resolve, 500)))
+        .then(() => syncFromTorii())
+        .catch(() => syncFromTorii())
       return { logs: [] }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unknown error'
-      setLogs(prev => [...prev, { turn, message: `Failed to advance turn: ${msg}`, type: 'system' }])
-      // Fallback: just sync current state
-      await syncFromTorii()
-      return null
     }
+
+    // Mock mode: local simulation
+    const newTurn = turn + 1
+    const result = simulateTurn(civs, grid, newTurn, {
+      foodDrain: settings.foodDrain,
+      eventFrequency: settings.eventFrequency,
+    })
+    setCivs(result.civs)
+    setGrid(result.grid)
+    setLogs(prev => [...prev, ...result.logs])
+    setTurn(newTurn)
+
+    // Track stats
+    setGameStats(prev => {
+      const s = { ...prev, totalTurns: newTurn }
+      for (const log of result.logs) {
+        if (log.type === 'combat') s.combatEvents++
+        if (log.type === 'trade') s.tradeEvents++
+        if (log.type === 'elimination') {
+          const name = log.message.match(/(.+?) has been/)?.[1] || 'Unknown'
+          const civ = result.civs.find(c => c.name === name)
+          s.eliminationOrder = [...s.eliminationOrder, { name, color: civ?.color || '#888', turn: newTurn }]
+        }
+      }
+      for (const c of result.civs) {
+        if (c.hp > s.peakHP.hp) s.peakHP = { name: c.name, color: c.color, hp: c.hp, turn: newTurn }
+        if (c.territories > s.peakTerritories.count) s.peakTerritories = { name: c.name, color: c.color, count: c.territories, turn: newTurn }
+      }
+      return s
+    })
+
+    // Check victory
+    const victory = checkVictory(result.civs, newTurn)
+    if (victory.winner) {
+      setWinner(victory.winner)
+      setVictoryType(victory.type)
+      setPhase('ended')
+      setAutoPlay(false)
+      setLogs(prev => [...prev, { turn: newTurn, message: victory.message, type: 'system' }])
+    }
+
+    return { logs: result.logs }
   }
 
   function getReplayFrame(): ReplayFrame {
