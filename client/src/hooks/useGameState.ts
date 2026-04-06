@@ -47,9 +47,21 @@ export function useGameState() {
         }
         return
       }
+
+      const uiPhase = gamePhaseToUI(gameState.game_phase)
+
+      // If on-chain game is still in Setup, fall back to mock mode
+      // so the user can play locally without waiting for on-chain game start
+      if (uiPhase === 'lobby' && gameState.turn_number === 0) {
+        if (dataSource === 'loading') {
+          setDataSource('mock')
+          setLogs(prev => [...prev, { turn: 0, message: 'On-chain game not started. Using local simulation.', type: 'system' }])
+        }
+        return
+      }
+
       const uiCivs = onChainCivs.sort((a, b) => a.civ_id - b.civ_id).map((c, i) => onChainCivToUI(c, i))
       const uiGrid = onChainTerritoriesToGrid(territories)
-      const uiPhase = gamePhaseToUI(gameState.game_phase)
       setCivs(prev => uiCivs.map((c, i) => ({ ...c, prompt: prev[i]?.prompt || '' })))
       setGrid(uiGrid)
       setTurn(gameState.turn_number)
