@@ -43,7 +43,7 @@ export function ShareCard({ winner, turn, stats }: Props) {
     // Subtitle
     ctx.font = '12px monospace'
     ctx.fillStyle = '#6b7280'
-    ctx.fillText('GAME OVER — Dojo Game Jam VIII', 30, 70)
+    ctx.fillText('GAME OVER — 0xCIV', 30, 70)
 
     // Winner
     ctx.font = 'bold 24px monospace'
@@ -132,7 +132,7 @@ export function ShareCard({ winner, turn, stats }: Props) {
     if (!canvas) return
     canvas.toBlob(async (blob) => {
       if (!blob) return
-      const text = `👑 ${winner.name} wins in Turn ${turn}!\n\n🎮 0xCIV — AI Civilization Strategy on Starknet\n🔗 https://r0ze998.github.io/0xciv/\n\n#0xCIV #DojoGameJam #Starknet #AI`
+      const text = `👑 ${winner.name} wins in Turn ${turn}!\n\n🎮 0xCIV — AI Civilization Strategy on Starknet\n🔗 https://r0ze998.github.io/0xciv/\n\n#0xCIV #Starknet #AI`
 
       if (navigator.share) {
         try {
