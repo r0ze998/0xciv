@@ -27,6 +27,25 @@ pub enum GamePhase {
     Ended,
 }
 
+#[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, DojoStore, Default)]
+pub enum VictoryType {
+    #[default]
+    None,
+    Domination,
+    Research,
+    Economic,
+}
+
+#[derive(Serde, Copy, Drop, Introspect, PartialEq, Debug, DojoStore, Default)]
+pub enum RandomEventType {
+    #[default]
+    None,
+    Famine,
+    Bounty,
+    Plague,
+    Renaissance,
+}
+
 // === Models ===
 
 #[derive(Copy, Drop, Serde, Debug)]
@@ -128,6 +147,29 @@ impl GamePhaseIntoFelt252 of Into<GamePhase, felt252> {
             GamePhase::Setup => 0,
             GamePhase::Running => 1,
             GamePhase::Ended => 2,
+        }
+    }
+}
+
+impl VictoryTypeIntoFelt252 of Into<VictoryType, felt252> {
+    fn into(self: VictoryType) -> felt252 {
+        match self {
+            VictoryType::None => 0,
+            VictoryType::Domination => 1,
+            VictoryType::Research => 2,
+            VictoryType::Economic => 3,
+        }
+    }
+}
+
+impl RandomEventTypeIntoFelt252 of Into<RandomEventType, felt252> {
+    fn into(self: RandomEventType) -> felt252 {
+        match self {
+            RandomEventType::None => 0,
+            RandomEventType::Famine => 1,
+            RandomEventType::Bounty => 2,
+            RandomEventType::Plague => 3,
+            RandomEventType::Renaissance => 4,
         }
     }
 }

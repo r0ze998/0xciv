@@ -116,8 +116,11 @@ export async function fetchTerritories(_gameId?: number): Promise<OnChainTerrito
   }))
 }
 
+export type VictoryType = 'domination' | 'research' | 'economic' | null
+export type RandomEventType = 'famine' | 'bounty' | 'plague' | 'renaissance' | null
+
 export interface OnChainEvent {
-  type: 'action' | 'combat' | 'elimination' | 'trade'
+  type: 'action' | 'combat' | 'elimination' | 'trade' | 'victory' | 'random_event'
   civ_id?: number
   turn?: number
   action?: string
@@ -125,6 +128,25 @@ export interface OnChainEvent {
   defender_civ?: number
   attacker_won?: boolean
   hp_damage?: number
+  victory_type?: VictoryType
+  event_type?: RandomEventType
+  affected_civ_id?: number
+  amount?: number
+}
+
+function parseVictoryType(v: string | number): VictoryType {
+  if (v === 1 || v === 'Domination') return 'domination'
+  if (v === 2 || v === 'Research') return 'research'
+  if (v === 3 || v === 'Economic') return 'economic'
+  return null
+}
+
+function parseRandomEventType(v: string | number): RandomEventType {
+  if (v === 1 || v === 'Famine') return 'famine'
+  if (v === 2 || v === 'Bounty') return 'bounty'
+  if (v === 3 || v === 'Plague') return 'plague'
+  if (v === 4 || v === 'Renaissance') return 'renaissance'
+  return null
 }
 
 export async function fetchEvents(): Promise<OnChainEvent[]> {
@@ -137,6 +159,12 @@ export async function fetchEvents(): Promise<OnChainEvent[]> {
     }
     dojoStarterCivEliminatedModels(limit: 10) {
       edges { node { civ_id } }
+    }
+    dojoStarterVictoryAchievedModels(limit: 5) {
+      edges { node { game_id winner_civ_id victory_type } }
+    }
+    dojoStarterRandomEventModels(limit: 20) {
+      edges { node { game_id turn event_type affected_civ_id amount } }
     }
   }`)
 
@@ -156,6 +184,22 @@ export async function fetchEvents(): Promise<OnChainEvent[]> {
   }
   for (const e of data.dojoStarterCivEliminatedModels?.edges || []) {
     events.push({ type: 'elimination', civ_id: e.node.civ_id })
+  }
+  for (const e of data.dojoStarterVictoryAchievedModels?.edges || []) {
+    events.push({
+      type: 'victory',
+      civ_id: e.node.winner_civ_id,
+      victory_type: parseVictoryType(e.node.victory_type),
+    })
+  }
+  for (const e of data.dojoStarterRandomEventModels?.edges || []) {
+    events.push({
+      type: 'random_event',
+      turn: e.node.turn,
+      event_type: parseRandomEventType(e.node.event_type),
+      affected_civ_id: e.node.affected_civ_id,
+      amount: parseNum(e.node.amount),
+    })
   }
 
   return events

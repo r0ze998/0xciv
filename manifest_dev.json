@@ -33,8 +33,8 @@
   },
   "contracts": [
     {
-      "address": "0xf354bbf71b6e93a15229be99fccd8a4142d87b7ef741de5ae2a9b7661407a9",
-      "class_hash": "0x77c920fb73ba0a311c120bd53a3d14492af264aef48864afd75854a884bb816",
+      "address": "0x66df65b113891fcbb63e64a99a00d6e854baec8010e048ec6e08b5d8601e8a2",
+      "class_hash": "0x77a331a8649da8ef7f67afc09f54d72a0025f044dbce499e479d37a22b42d51",
       "init_calldata": [],
       "tag": "dojo_starter-actions",
       "selector": "0x7a1c71029f2d0b38e3ac89b09931d08b6e48417e079c289ff19a8698d0cba33",
@@ -362,6 +362,38 @@
     {
       "members": [
         {
+          "name": "game_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "turn",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "event_type",
+          "type": "dojo_starter::models::RandomEventType",
+          "key": false
+        },
+        {
+          "name": "affected_civ_id",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u128",
+          "key": false
+        }
+      ],
+      "class_hash": "0x16a3fb8b454a350a451ad8eee88b5be821927c2890f28e7a8174bd80b7dddce",
+      "tag": "dojo_starter-RandomEvent",
+      "selector": "0x460f242c85d800d45924dd2f9fe27cfc675717ad2495ecc446a2bcbb24ef80c"
+    },
+    {
+      "members": [
+        {
           "name": "trade_id",
           "type": "core::integer::u32",
           "key": true
@@ -397,6 +429,28 @@
       "class_hash": "0x3dc43b163ccc9b9c2f4fa295b5dd3cf1ba83ad8170b9fef45ca26213537c972",
       "tag": "dojo_starter-TurnAdvanced",
       "selector": "0x496318d95944b53f4626c5e45fa148093a22ca3b65a9e8eaf1b295856726751"
+    },
+    {
+      "members": [
+        {
+          "name": "game_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "winner_civ_id",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "victory_type",
+          "type": "dojo_starter::models::VictoryType",
+          "key": false
+        }
+      ],
+      "class_hash": "0x6c5fb79f17a16a8f16d251f0e97b0700b86d38f42c619c98947dbb4e86a17ac",
+      "tag": "dojo_starter-VictoryAchieved",
+      "selector": "0x5247c62df96d97a11d8586b6428993730a3d16947c48e8abcbe058aebcc3766"
     }
   ],
   "external_contracts": [],
@@ -2426,6 +2480,32 @@
     },
     {
       "type": "enum",
+      "name": "dojo_starter::models::RandomEventType",
+      "variants": [
+        {
+          "name": "None",
+          "type": "()"
+        },
+        {
+          "name": "Famine",
+          "type": "()"
+        },
+        {
+          "name": "Bounty",
+          "type": "()"
+        },
+        {
+          "name": "Plague",
+          "type": "()"
+        },
+        {
+          "name": "Renaissance",
+          "type": "()"
+        }
+      ]
+    },
+    {
+      "type": "enum",
       "name": "dojo_starter::models::ResourceType",
       "variants": [
         {
@@ -2571,6 +2651,28 @@
         {
           "name": "is_active",
           "type": "core::bool"
+        }
+      ]
+    },
+    {
+      "type": "enum",
+      "name": "dojo_starter::models::VictoryType",
+      "variants": [
+        {
+          "name": "None",
+          "type": "()"
+        },
+        {
+          "name": "Domination",
+          "type": "()"
+        },
+        {
+          "name": "Research",
+          "type": "()"
+        },
+        {
+          "name": "Economic",
+          "type": "()"
         }
       ]
     },
@@ -2724,6 +2826,22 @@
           ],
           "outputs": [],
           "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "get_tech_level",
+          "inputs": [
+            {
+              "name": "knowledge",
+              "type": "core::integer::u128"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::integer::u8"
+            }
+          ],
+          "state_mutability": "view"
         }
       ]
     },
@@ -2890,6 +3008,54 @@
     },
     {
       "type": "struct",
+      "name": "dojo_starter::systems::actions::actions::RandomEvent",
+      "members": [
+        {
+          "name": "game_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "turn",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "event_type",
+          "type": "dojo_starter::models::RandomEventType"
+        },
+        {
+          "name": "affected_civ_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u128"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "dojo_starter::systems::actions::actions::RandomEventValue",
+      "members": [
+        {
+          "name": "turn",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "event_type",
+          "type": "dojo_starter::models::RandomEventType"
+        },
+        {
+          "name": "affected_civ_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u128"
+        }
+      ]
+    },
+    {
+      "type": "struct",
       "name": "dojo_starter::systems::actions::actions::TradeExecuted",
       "members": [
         {
@@ -2945,6 +3111,38 @@
       ]
     },
     {
+      "type": "struct",
+      "name": "dojo_starter::systems::actions::actions::VictoryAchieved",
+      "members": [
+        {
+          "name": "game_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "winner_civ_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "victory_type",
+          "type": "dojo_starter::models::VictoryType"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "dojo_starter::systems::actions::actions::VictoryAchievedValue",
+      "members": [
+        {
+          "name": "winner_civ_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "victory_type",
+          "type": "dojo_starter::models::VictoryType"
+        }
+      ]
+    },
+    {
       "type": "event",
       "name": "dojo_starter::systems::actions::actions::e_ActionPerformed::Event",
       "kind": "enum",
@@ -2976,6 +3174,12 @@
     },
     {
       "type": "event",
+      "name": "dojo_starter::systems::actions::actions::e_RandomEvent::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
       "name": "dojo_starter::systems::actions::actions::e_TradeExecuted::Event",
       "kind": "enum",
       "variants": []
@@ -2987,12 +3191,18 @@
       "variants": []
     },
     {
+      "type": "event",
+      "name": "dojo_starter::systems::actions::actions::e_VictoryAchieved::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
       "type": "function",
       "name": "ensure_abi",
       "inputs": [
         {
           "name": "event",
-          "type": "dojo_starter::systems::actions::actions::TurnAdvanced"
+          "type": "dojo_starter::systems::actions::actions::VictoryAchieved"
         }
       ],
       "outputs": [],
@@ -3011,7 +3221,7 @@
       "inputs": [
         {
           "name": "value",
-          "type": "dojo_starter::systems::actions::actions::TurnAdvancedValue"
+          "type": "dojo_starter::systems::actions::actions::VictoryAchievedValue"
         }
       ],
       "outputs": [],

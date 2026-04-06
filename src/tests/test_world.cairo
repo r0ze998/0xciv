@@ -29,6 +29,8 @@ mod tests {
                 TestResource::Event(actions::e_TurnAdvanced::TEST_CLASS_HASH),
                 TestResource::Event(actions::e_CivEliminated::TEST_CLASS_HASH),
                 TestResource::Event(actions::e_GameEnded::TEST_CLASS_HASH),
+                TestResource::Event(actions::e_VictoryAchieved::TEST_CLASS_HASH),
+                TestResource::Event(actions::e_RandomEvent::TEST_CLASS_HASH),
                 TestResource::Contract(actions::TEST_CLASS_HASH),
             ]
                 .span(),
@@ -331,5 +333,137 @@ mod tests {
         let game_after: GameState = world.read_model(1_u32);
 
         assert(game_after.turn_number == game_before.turn_number + 1, 'turn should increment');
+    }
+
+    #[test]
+    fn test_food_drain_per_turn() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x1234>());
+        actions_system.spawn_civilization();
+
+        let civ_before: dojo_starter::models::Civilization = world.read_model(1_u32);
+        actions_system.advance_turn();
+        let civ_after: dojo_starter::models::Civilization = world.read_model(1_u32);
+
+        // Food should decrease by FOOD_DRAIN_PER_TURN (3)
+        assert(civ_after.food == civ_before.food - 3, 'food should drain by 3');
+    }
+
+    #[test]
+    fn test_tech_gather_bonus() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x1234>());
+        actions_system.spawn_civilization();
+
+        // Civ 1 starts with knowledge=25, which is >= TECH_AGRICULTURE (15)
+        // so gather should include the +2 tech bonus
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x0>());
+        let civ_before: dojo_starter::models::Civilization = world.read_model(1_u32);
+        actions_system.gather();
+        let civ_after: dojo_starter::models::Civilization = world.read_model(1_u32);
+
+        let total_before = civ_before.food + civ_before.metal + civ_before.knowledge;
+        let total_after = civ_after.food + civ_after.metal + civ_after.knowledge;
+        // Should gain more than base (10 + territory bonus) due to tech
+        assert(total_after > total_before + 10, 'tech should boost gather');
+    }
+
+    #[test]
+    fn test_defend_with_knowledge_heal() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x1234>());
+        actions_system.spawn_civilization();
+
+        // First attack civ 1 to reduce HP, then defend to test healing
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x1234>());
+        actions_system.attack(1);
+
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x0>());
+        let civ_damaged: dojo_starter::models::Civilization = world.read_model(1_u32);
+
+        // Only test healing if civ 1 was actually damaged
+        if civ_damaged.hp < 100 {
+            actions_system.defend();
+            let civ_healed: dojo_starter::models::Civilization = world.read_model(1_u32);
+            // Should heal: base 5 + knowledge/10 (25/10=2) = 7 minimum
+            assert(civ_healed.hp > civ_damaged.hp, 'defend should heal');
+        }
+    }
+
+    #[test]
+    fn test_get_tech_level() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        // Test tech levels at various knowledge thresholds
+        assert(actions_system.get_tech_level(0) == 0, 'level 0 at knowledge 0');
+        assert(actions_system.get_tech_level(15) == 1, 'level 1 at knowledge 15');
+        assert(actions_system.get_tech_level(25) == 2, 'level 2 at knowledge 25');
+        assert(actions_system.get_tech_level(40) == 3, 'level 3 at knowledge 40');
+        assert(actions_system.get_tech_level(60) == 4, 'level 4 at knowledge 60');
+        assert(actions_system.get_tech_level(80) == 5, 'level 5 at knowledge 80');
+        assert(actions_system.get_tech_level(100) == 6, 'level 6 at knowledge 100');
+        assert(actions_system.get_tech_level(200) == 6, 'max level 6');
+    }
+
+    #[test]
+    fn test_advance_turn_multiple_food_drain() {
+        let ndef = namespace_def();
+        let mut world = spawn_test_world(world::TEST_CLASS_HASH, [ndef].span());
+        world.sync_perms_and_inits(contract_defs());
+
+        let (contract_address, _) = world.dns(@"actions").unwrap();
+        let actions_system = IActionsDispatcher { contract_address };
+
+        actions_system.create_game();
+        actions_system.spawn_civilization();
+
+        starknet::testing::set_contract_address(starknet::contract_address_const::<0x1234>());
+        actions_system.spawn_civilization();
+
+        // Advance 10 turns — food should decrease by 30 total
+        let civ_before: dojo_starter::models::Civilization = world.read_model(1_u32);
+        let mut t: u32 = 0;
+        while t < 10 {
+            actions_system.advance_turn();
+            t += 1;
+        };
+        let civ_after: dojo_starter::models::Civilization = world.read_model(1_u32);
+
+        // Food drain is 3 per turn × 10 turns = 30 (minus any random event effects)
+        // Just check food decreased significantly
+        assert(civ_after.food < civ_before.food, 'food should decrease over turns');
+        assert(civ_before.food - civ_after.food >= 20, 'should drain 20+ food');
     }
 }

@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { fetchAllOnChainData } from '../torii'
-import { onChainCivToUI, onChainTerritoriesToGrid, gamePhaseToUI, generateGrid, generateCivs, assignStartingTerritories, simulateTurn } from '../lib/game-utils'
+import type { VictoryType } from '../torii'
+import { onChainCivToUI, onChainTerritoriesToGrid, gamePhaseToUI, generateGrid, generateCivs, assignStartingTerritories } from '../lib/game-utils'
 import type { Civilization, Territory, Phase, LogEntry, GameStats } from '../types/game'
 import type { Settings } from '../components/GameSettings'
 import { DEFAULT_SETTINGS } from '../components/GameSettings'
 import type { ReplayFrame } from './useReplay'
-import { checkVictory } from '../lib/victory'
-import type { VictoryType } from '../lib/victory'
+import { executeAdvanceTurn } from '../actions'
 
 export function useGameState() {
   const [phase, setPhase] = useState<Phase>('lobby')
@@ -39,7 +39,7 @@ export function useGameState() {
       if (!gameState || onChainCivs.length === 0) {
         if (dataSource === 'loading') {
           setDataSource('mock')
-          setLogs(prev => [...prev, { turn: 0, message: 'No on-chain game found. Using mock simulation.', type: 'system' }])
+          setLogs(prev => [...prev, { turn: 0, message: 'No on-chain game found. Waiting for game creation...', type: 'system' }])
         }
         return
       }
@@ -50,19 +50,70 @@ export function useGameState() {
       setGrid(uiGrid)
       setTurn(gameState.turn_number)
       setPhase(uiPhase)
-      if (uiPhase === 'ended') {
-        const alive = uiCivs.find(c => c.isAlive)
-        if (alive) setWinner(alive)
-      }
+
+      // Track stats from on-chain state
+      setGameStats(prev => {
+        const s = { ...prev, totalTurns: gameState.turn_number }
+        for (const c of uiCivs) {
+          if (c.hp > s.peakHP.hp) s.peakHP = { name: c.name, color: c.color, hp: c.hp, turn: gameState.turn_number }
+          if (c.territories > s.peakTerritories.count) s.peakTerritories = { name: c.name, color: c.color, count: c.territories, turn: gameState.turn_number }
+        }
+        return s
+      })
+
       if (events && events.length > 0) {
-        const eventLogs: LogEntry[] = events.map(e => {
-          if (e.type === 'action') return { turn: e.turn || 0, message: `Civ #${e.civ_id} performed ${e.action}`, type: 'system' as const }
-          if (e.type === 'combat') return { turn: 0, message: `⚔️ Civ #${e.attacker_civ} attacked Civ #${e.defender_civ} — ${e.attacker_won ? 'Victory' : 'Repelled'}! ${e.hp_damage} damage`, type: 'combat' as const }
-          if (e.type === 'elimination') return { turn: 0, message: `☠️ Civ #${e.civ_id} has been eliminated!`, type: 'elimination' as const }
-          return { turn: 0, message: 'Trade event', type: 'trade' as const }
-        })
+        const eventLogs: LogEntry[] = []
+        for (const e of events) {
+          if (e.type === 'action') {
+            eventLogs.push({ turn: e.turn || 0, message: `Civ #${e.civ_id} performed ${e.action}`, type: 'system' })
+          } else if (e.type === 'combat') {
+            eventLogs.push({ turn: 0, message: `⚔️ Civ #${e.attacker_civ} attacked Civ #${e.defender_civ} — ${e.attacker_won ? 'Victory' : 'Repelled'}! ${e.hp_damage} damage`, type: 'combat' })
+            setGameStats(prev => ({ ...prev, combatEvents: prev.combatEvents + 1 }))
+          } else if (e.type === 'elimination') {
+            eventLogs.push({ turn: 0, message: `☠️ Civ #${e.civ_id} has been eliminated!`, type: 'elimination' })
+            const civ = uiCivs.find(c => c.id === (e.civ_id || 0) - 1)
+            if (civ) {
+              setGameStats(prev => ({
+                ...prev,
+                eliminationOrder: [...prev.eliminationOrder, { name: civ.name, color: civ.color, turn: gameState.turn_number }],
+              }))
+            }
+          } else if (e.type === 'trade') {
+            eventLogs.push({ turn: 0, message: 'Trade executed', type: 'trade' })
+            setGameStats(prev => ({ ...prev, tradeEvents: prev.tradeEvents + 1 }))
+          } else if (e.type === 'victory') {
+            const victorCiv = uiCivs.find(c => c.id === (e.civ_id || 0) - 1)
+            if (victorCiv) {
+              setWinner(victorCiv)
+              setVictoryType(e.victory_type || null)
+              const typeLabel = e.victory_type ? e.victory_type.toUpperCase() : 'UNKNOWN'
+              eventLogs.push({ turn: gameState.turn_number, message: `🏆 ${typeLabel} VICTORY — ${victorCiv.name} wins!`, type: 'system' })
+            }
+          } else if (e.type === 'random_event') {
+            const eventLabels: Record<string, string> = {
+              famine: '🌾 FAMINE',
+              bounty: '🎁 BOUNTY',
+              plague: '🦠 PLAGUE',
+              renaissance: '📖 RENAISSANCE',
+            }
+            const label = e.event_type ? eventLabels[e.event_type] || e.event_type : 'EVENT'
+            const target = e.affected_civ_id && e.affected_civ_id > 0
+              ? uiCivs.find(c => c.id === e.affected_civ_id! - 1)?.name || `Civ #${e.affected_civ_id}`
+              : 'all civilizations'
+            eventLogs.push({ turn: e.turn || 0, message: `${label} affects ${target}! (${e.amount})`, type: 'system' })
+          }
+        }
         setLogs(eventLogs)
       }
+
+      if (uiPhase === 'ended' && !winner) {
+        const alive = uiCivs.find(c => c.isAlive)
+        if (alive) {
+          setWinner(alive)
+          if (!victoryType) setVictoryType('domination')
+        }
+      }
+
       if (dataSource !== 'torii') {
         setDataSource('torii')
         setLogs(prev => [...prev, { turn: 0, message: 'Connected to Torii. Showing on-chain data.', type: 'system' }])
@@ -70,10 +121,10 @@ export function useGameState() {
     } catch {
       if (dataSource === 'loading') {
         setDataSource('mock')
-        setLogs(prev => [...prev, { turn: 0, message: 'Torii unavailable. Using mock simulation.', type: 'system' }])
+        setLogs(prev => [...prev, { turn: 0, message: 'Torii unavailable. Connect to a running Torii instance to play.', type: 'system' }])
       }
     }
-  }, [dataSource])
+  }, [dataSource, winner, victoryType])
 
   useEffect(() => {
     syncFromTorii()
@@ -81,51 +132,22 @@ export function useGameState() {
     return () => clearInterval(interval)
   }, [syncFromTorii])
 
-  function advanceTurn(): { logs: LogEntry[] } | null {
+  async function advanceTurn(): Promise<{ logs: LogEntry[] } | null> {
     if (winner) return null
-    if (dataSource === 'torii') {
-      syncFromTorii()
-      setLogs(prev => [...prev, { turn, message: 'Syncing on-chain state...', type: 'system' }])
+
+    try {
+      // Call on-chain advance_turn
+      await executeAdvanceTurn()
+      // Wait briefly for Torii to index, then sync
+      await new Promise(resolve => setTimeout(resolve, 500))
+      await syncFromTorii()
+      return { logs: [] }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      setLogs(prev => [...prev, { turn, message: `Failed to advance turn: ${msg}`, type: 'system' }])
+      // Fallback: just sync current state
+      await syncFromTorii()
       return null
-    }
-    const newTurn = turn + 1
-    const result = simulateTurn(civs, grid, newTurn, { foodDrain: settings.foodDrain, eventFrequency: settings.eventFrequency })
-    setCivs(result.civs)
-    setGrid(result.grid)
-    setLogs(prev => [...prev, ...result.logs])
-    setTurn(newTurn)
-
-    // Track stats
-    setGameStats(prev => {
-      const s = { ...prev, totalTurns: newTurn }
-      for (const log of result.logs) {
-        if (log.type === 'combat') s.combatEvents++
-        if (log.type === 'trade') s.tradeEvents++
-        if (log.type === 'elimination') {
-          const name = log.message.match(/(.+?) has been/)?.[1] || 'Unknown'
-          const civ = result.civs.find(c => c.name === name)
-          s.eliminationOrder = [...s.eliminationOrder, { name, color: civ?.color || '#888', turn: newTurn }]
-        }
-      }
-      for (const c of result.civs) {
-        if (c.hp > s.peakHP.hp) s.peakHP = { name: c.name, color: c.color, hp: c.hp, turn: newTurn }
-        if (c.territories > s.peakTerritories.count) s.peakTerritories = { name: c.name, color: c.color, count: c.territories, turn: newTurn }
-      }
-      return s
-    })
-
-    const victory = checkVictory(result.civs, newTurn)
-    if (victory.winner) {
-      setWinner(victory.winner)
-      setVictoryType(victory.type)
-      setPhase('ended')
-      setAutoPlay(false)
-      setLogs(prev => [...prev, { turn: newTurn, message: victory.message, type: 'system' }])
-      return { logs: result.logs }
-    }
-
-    return {
-      logs: result.logs,
     }
   }
 

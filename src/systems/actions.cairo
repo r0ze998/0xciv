@@ -24,6 +24,9 @@ pub trait IActions<T> {
     fn attack(ref self: T, target_civ: u32);
     fn defend(ref self: T);
     fn check_elimination(ref self: T, civ_id: u32);
+
+    // Query helpers
+    fn get_tech_level(self: @T, knowledge: u128) -> u8;
 }
 
 #[dojo::contract]
@@ -31,8 +34,8 @@ pub mod actions {
     use dojo::event::EventStorage;
     use dojo::model::ModelStorage;
     use dojo_starter::models::{
-        AgentAction, Civilization, GamePhase, GameState, PlayerCiv, ResourceType, Strategy,
-        Territory, TradeProposal,
+        AgentAction, Civilization, GamePhase, GameState, PlayerCiv, RandomEventType, ResourceType,
+        Strategy, Territory, TradeProposal, VictoryType,
     };
     use starknet::{ContractAddress, get_caller_address};
     use super::IActions;
@@ -52,6 +55,23 @@ pub mod actions {
     const ATTACK_HP_DAMAGE: u128 = 20;
     const FAILED_ATTACK_HP_DAMAGE: u128 = 10;
     const ATTACK_METAL_COST: u128 = 10;
+
+    // Tech thresholds (knowledge required)
+    const TECH_AGRICULTURE: u128 = 15; // +2 food/gather
+    const TECH_BRONZE_WORKING: u128 = 25; // +3 attack dmg
+    const TECH_WRITING: u128 = 40; // +2 trade bonus
+    const TECH_PHILOSOPHY: u128 = 60; // +3 HP/defend
+    const TECH_ENGINEERING: u128 = 80; // capture rate +15%
+    const TECH_ENLIGHTENMENT: u128 = 100; // all bonuses ×1.5
+
+    // Turn mechanics
+    const FOOD_DRAIN_PER_TURN: u128 = 3;
+    const EVENT_FREQUENCY: u32 = 5; // random event every N turns
+
+    // Victory thresholds
+    const RESEARCH_VICTORY_THRESHOLD: u128 = 150;
+    const ECONOMIC_VICTORY_THRESHOLD: u128 = 200;
+    const ECONOMIC_VICTORY_MIN_TURN: u32 = 20;
 
     // === Events ===
 
@@ -113,6 +133,26 @@ pub mod actions {
         #[key]
         pub game_id: u32,
         pub winner_civ_id: u32,
+    }
+
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
+    pub struct VictoryAchieved {
+        #[key]
+        pub game_id: u32,
+        pub winner_civ_id: u32,
+        pub victory_type: VictoryType,
+    }
+
+    #[derive(Copy, Drop, Serde)]
+    #[dojo::event]
+    pub struct RandomEvent {
+        #[key]
+        pub game_id: u32,
+        pub turn: u32,
+        pub event_type: RandomEventType,
+        pub affected_civ_id: u32,
+        pub amount: u128,
     }
 
     // === Implementation ===
@@ -250,7 +290,17 @@ pub mod actions {
             } else {
                 civ.knowledge * 40 / 100
             };
-            let boosted = production + (production * knowledge_bonus / 100);
+            let mut boosted = production + (production * knowledge_bonus / 100);
+
+            // Tech: Agriculture (+2)
+            if civ.knowledge >= TECH_AGRICULTURE {
+                boosted += 2;
+            }
+
+            // Tech: Enlightenment (×1.5)
+            if civ.knowledge >= TECH_ENLIGHTENMENT {
+                boosted = boosted * 3 / 2;
+            }
 
             civ.food += boosted;
             civ.metal += boosted / 2;
@@ -388,7 +438,14 @@ pub mod actions {
                 * 13;
             let random_factor: u128 = seed % 20;
 
-            let attacker_power = attacker.military_strength + random_factor;
+            // Tech: Bronze Working (+3 attack power)
+            let tech_attack_bonus: u128 = if attacker.knowledge >= TECH_BRONZE_WORKING {
+                3
+            } else {
+                0
+            };
+
+            let attacker_power = attacker.military_strength + random_factor + tech_attack_bonus;
             let attacker_won = attacker_power > def_strength;
 
             let mut hp_damage: u128 = 0;
@@ -403,7 +460,14 @@ pub mod actions {
                 }
 
                 // Transfer a territory if defender has one
-                if defender.territory_count > 0 {
+                // Tech: Engineering increases capture chance (always capture vs 60% base)
+                let capture_roll: u128 = (seed * 7 + 3) % 100;
+                let capture_threshold: u128 = if attacker.knowledge >= TECH_ENGINEERING {
+                    100 // always capture
+                } else {
+                    60 // 60% base chance
+                };
+                if defender.territory_count > 0 && capture_roll < capture_threshold {
                     let (found, tx, ty) = find_territory_owned_by(@world, target_civ);
                     if found {
                         let mut terr: Territory = world.read_model((tx, ty));
@@ -487,9 +551,24 @@ pub mod actions {
             }
             civ.military_strength += build_amount;
 
-            // Defending also recovers some HP (up to max 100)
+            // Tech: Philosophy (+3 HP heal)
+            let tech_heal_bonus: u128 = if civ.knowledge >= TECH_PHILOSOPHY {
+                3
+            } else {
+                0
+            };
+
+            // Knowledge-based heal: min(knowledge/10, 5)
+            let knowledge_heal: u128 = if civ.knowledge / 10 > 5 {
+                5
+            } else {
+                civ.knowledge / 10
+            };
+
+            // Defending recovers HP (base 5 + knowledge + tech)
+            let heal_amount: u128 = 5 + knowledge_heal + tech_heal_bonus;
             if civ.hp < 100 {
-                civ.hp += 5;
+                civ.hp += heal_amount;
                 if civ.hp > 100 {
                     civ.hp = 100;
                 }
@@ -505,6 +584,10 @@ pub mod actions {
                         civ_id: civ.civ_id, turn: game.turn_number, action: AgentAction::Defend,
                     },
                 );
+        }
+
+        fn get_tech_level(self: @ContractState, knowledge: u128) -> u8 {
+            compute_tech_level(knowledge)
         }
 
         fn check_elimination(ref self: ContractState, civ_id: u32) {
@@ -563,7 +646,30 @@ pub mod actions {
                 i += 1;
             };
 
-            // Check elimination for all civs
+            // Food drain for all alive civs
+            let mut f: u32 = 1;
+            while f <= game.civ_count {
+                let mut civ: Civilization = world.read_model(f);
+                if civ.is_alive {
+                    if civ.food > FOOD_DRAIN_PER_TURN {
+                        civ.food -= FOOD_DRAIN_PER_TURN;
+                    } else {
+                        civ.food = 0;
+                    }
+                    world.write_model(@civ);
+                }
+                f += 1;
+            };
+
+            game.turn_number += 1;
+
+            // Random events (every EVENT_FREQUENCY turns)
+            if game.turn_number > 1
+                && game.turn_number % EVENT_FREQUENCY == 0 {
+                apply_random_event(ref world, @game);
+            }
+
+            // Check elimination for all civs (after food drain + events)
             let mut j: u32 = 1;
             while j <= game.civ_count {
                 let mut civ: Civilization = world.read_model(j);
@@ -588,14 +694,43 @@ pub mod actions {
                 j += 1;
             };
 
-            game.turn_number += 1;
+            // Check victory conditions
+            let (victory_type, victor_id) = check_victory_conditions(
+                @world, @game,
+            );
 
-            // Check if only 1 alive — last civilization standing wins
-            if game.alive_count <= 1 && game.civ_count > 1 {
+            if victory_type != VictoryType::None {
+                game.game_phase = GamePhase::Ended;
+                world.write_model(@game);
+                world
+                    .emit_event(
+                        @VictoryAchieved {
+                            game_id: GAME_ID,
+                            winner_civ_id: victor_id,
+                            victory_type,
+                        },
+                    );
+                world
+                    .emit_event(
+                        @GameEnded { game_id: GAME_ID, winner_civ_id: victor_id },
+                    );
+            } else if game.alive_count <= 1 && game.civ_count > 1 {
+                // Domination: last civ standing
                 game.game_phase = GamePhase::Ended;
                 let winner_id = find_last_alive(@world, game.civ_count);
                 world.write_model(@game);
-                world.emit_event(@GameEnded { game_id: GAME_ID, winner_civ_id: winner_id });
+                world
+                    .emit_event(
+                        @VictoryAchieved {
+                            game_id: GAME_ID,
+                            winner_civ_id: winner_id,
+                            victory_type: VictoryType::Domination,
+                        },
+                    );
+                world
+                    .emit_event(
+                        @GameEnded { game_id: GAME_ID, winner_civ_id: winner_id },
+                    );
             } else {
                 world.write_model(@game);
                 world
@@ -663,6 +798,168 @@ pub mod actions {
             i += 1;
         };
         result
+    }
+
+    fn compute_tech_level(knowledge: u128) -> u8 {
+        let mut level: u8 = 0;
+        if knowledge >= TECH_AGRICULTURE {
+            level += 1;
+        }
+        if knowledge >= TECH_BRONZE_WORKING {
+            level += 1;
+        }
+        if knowledge >= TECH_WRITING {
+            level += 1;
+        }
+        if knowledge >= TECH_PHILOSOPHY {
+            level += 1;
+        }
+        if knowledge >= TECH_ENGINEERING {
+            level += 1;
+        }
+        if knowledge >= TECH_ENLIGHTENMENT {
+            level += 1;
+        }
+        level
+    }
+
+    fn check_victory_conditions(
+        world: @dojo::world::WorldStorage, game: @GameState,
+    ) -> (VictoryType, u32) {
+        let civ_count = *game.civ_count;
+        let turn = *game.turn_number;
+
+        // Research victory: first civ to reach knowledge threshold
+        let mut r: u32 = 1;
+        while r <= civ_count {
+            let civ: Civilization = world.read_model(r);
+            if civ.is_alive && civ.knowledge >= RESEARCH_VICTORY_THRESHOLD {
+                return (VictoryType::Research, r);
+            }
+            r += 1;
+        };
+
+        // Economic victory: first civ to reach total resource threshold (after min turn)
+        if turn >= ECONOMIC_VICTORY_MIN_TURN {
+            let mut e: u32 = 1;
+            while e <= civ_count {
+                let civ: Civilization = world.read_model(e);
+                if civ.is_alive {
+                    let total = civ.food + civ.metal + civ.knowledge;
+                    if total >= ECONOMIC_VICTORY_THRESHOLD {
+                        return (VictoryType::Economic, e);
+                    }
+                }
+                e += 1;
+            };
+        }
+
+        (VictoryType::None, 0)
+    }
+
+    fn apply_random_event(
+        ref world: dojo::world::WorldStorage, game: @GameState,
+    ) {
+        let turn = *game.turn_number;
+        let civ_count = *game.civ_count;
+
+        // Pseudo-random from turn number
+        let seed: u128 = turn.into() * 31 + 7;
+        let event_roll: u128 = seed % 100;
+
+        if event_roll < 25 {
+            // Famine — all alive civs lose food
+            let loss: u128 = (seed % 10) + 5;
+            let mut k: u32 = 1;
+            while k <= civ_count {
+                let mut civ: Civilization = world.read_model(k);
+                if civ.is_alive {
+                    if civ.food > loss {
+                        civ.food -= loss;
+                    } else {
+                        civ.food = 0;
+                    }
+                    world.write_model(@civ);
+                }
+                k += 1;
+            };
+            world
+                .emit_event(
+                    @RandomEvent {
+                        game_id: GAME_ID,
+                        turn,
+                        event_type: RandomEventType::Famine,
+                        affected_civ_id: 0,
+                        amount: loss,
+                    },
+                );
+        } else if event_roll < 50 {
+            // Bounty — random civ gets bonus resources
+            let target_idx: u32 = (seed % civ_count.into()).try_into().unwrap() + 1;
+            let bonus: u128 = (seed % 15) + 10;
+            let mut civ: Civilization = world.read_model(target_idx);
+            if civ.is_alive {
+                civ.food += bonus;
+                civ.metal += bonus / 2;
+                world.write_model(@civ);
+            }
+            world
+                .emit_event(
+                    @RandomEvent {
+                        game_id: GAME_ID,
+                        turn,
+                        event_type: RandomEventType::Bounty,
+                        affected_civ_id: target_idx,
+                        amount: bonus,
+                    },
+                );
+        } else if event_roll < 70 {
+            // Plague — random civ loses HP
+            let target_idx: u32 = (seed % civ_count.into()).try_into().unwrap() + 1;
+            let dmg: u128 = (seed % 15) + 5;
+            let mut civ: Civilization = world.read_model(target_idx);
+            if civ.is_alive {
+                if civ.hp > dmg {
+                    civ.hp -= dmg;
+                } else {
+                    civ.hp = 1; // plague doesn't instantly kill
+                }
+                world.write_model(@civ);
+            }
+            world
+                .emit_event(
+                    @RandomEvent {
+                        game_id: GAME_ID,
+                        turn,
+                        event_type: RandomEventType::Plague,
+                        affected_civ_id: target_idx,
+                        amount: dmg,
+                    },
+                );
+        } else if event_roll < 85 {
+            // Renaissance — all alive civs gain knowledge
+            let gain: u128 = (seed % 8) + 3;
+            let mut k: u32 = 1;
+            while k <= civ_count {
+                let mut civ: Civilization = world.read_model(k);
+                if civ.is_alive {
+                    civ.knowledge += gain;
+                    world.write_model(@civ);
+                }
+                k += 1;
+            };
+            world
+                .emit_event(
+                    @RandomEvent {
+                        game_id: GAME_ID,
+                        turn,
+                        event_type: RandomEventType::Renaissance,
+                        affected_civ_id: 0,
+                        amount: gain,
+                    },
+                );
+        }
+        // 15% chance: no event
     }
 
     fn find_territory_owned_by(

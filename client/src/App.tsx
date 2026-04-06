@@ -85,13 +85,13 @@ export default function App() {
     ])
   }
 
-  function nextTurn() {
+  async function nextTurn() {
     setHistory(prev => [...prev, {
       turn: game.turn,
       civData: game.civs.map(c => ({ id: c.id, hp: c.hp, food: c.food, territories: c.territories, isAlive: c.isAlive })),
     }])
 
-    const result = game.advanceTurn()
+    const result = await game.advanceTurn()
     if (!result) return
 
     replay.record(game.getReplayFrame())
