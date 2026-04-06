@@ -1,6 +1,6 @@
 // Torii GraphQL client for reading on-chain game state
 
-const TORII_URL = import.meta.env.VITE_TORII_URL || 'http://localhost:8080/graphql'
+const TORII_URL = import.meta.env.VITE_TORII_URL || 'https://api.cartridge.gg/x/0xciv/torii/graphql'
 
 export type ResourceType = 'food' | 'metal' | 'knowledge'
 

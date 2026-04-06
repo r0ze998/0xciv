@@ -1,7 +1,7 @@
 // On-chain action execution from frontend via Cartridge Controller
 import { connector } from './cartridge'
 
-const ACTIONS_CONTRACT = import.meta.env.VITE_ACTIONS_CONTRACT || '0x0'
+const ACTIONS_CONTRACT = import.meta.env.VITE_ACTIONS_CONTRACT || '0xf354bbf71b6e93a15229be99fccd8a4142d87b7ef741de5ae2a9b7661407a9'
 
 async function getAccount() {
   const ctrl = connector.controller
