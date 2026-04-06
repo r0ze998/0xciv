@@ -4,7 +4,7 @@ import { useGameState } from './hooks/useGameState'
 import { useReplay } from './hooks/useReplay'
 import { useBGM } from './hooks/useBGM'
 import { useTurnEffects } from './hooks/useTurnEffects'
-import { GridMap } from './components/GridMap'
+import { GameScene } from './components/three/GameScene'
 import { LobbyScreen } from './components/LobbyScreen'
 import { GameOverOverlay } from './components/GameOverOverlay'
 import { TurnBanner } from './components/TurnBanner'
@@ -14,7 +14,7 @@ import { IntroSequence } from './components/IntroSequence'
 import { CivPortrait } from './components/CivPortrait'
 import { Tutorial } from './components/Tutorial'
 import { MobileNav } from './components/MobileNav'
-import { ParticleLayer, useParticles } from './components/Particles'
+import { useParticles } from './components/Particles'
 import { Leaderboard } from './components/Leaderboard'
 import { GameSettings } from './components/GameSettings'
 import { GameHeader } from './components/GameHeader'
@@ -28,7 +28,7 @@ import { connectWallet, disconnectWallet } from './cartridge'
 export default function App() {
   const game = useGameState()
   const sound = useSound()
-  const { particles, emit } = useParticles()
+  const { emit } = useParticles()
   const replay = useReplay()
   const bgm = useBGM()
   const effects = useTurnEffects({ sound, emit })
@@ -139,7 +139,7 @@ export default function App() {
       style={{ backgroundColor: 'var(--c-bg)', fontFamily: 'var(--font-body)' }}>
       <TurnBanner turn={displayTurn} warCry={effects.warCry?.text} warCryColor={effects.warCry?.color} />
       <EventToast logs={game.logs} />
-      <ParticleLayer particles={particles} />
+      {/* ParticleLayer replaced by 3D effects in GameScene */}
       <Leaderboard show={showLeaderboard} onClose={() => setShowLeaderboard(false)} />
 
       <GameHeader
@@ -155,7 +155,7 @@ export default function App() {
         {/* Left: Map + Prompt */}
         <div className="lg:w-1/2 space-y-3">
           <QuickTips />
-          <GridMap grid={displayGrid} civs={displayCivs} selectedCiv={game.selectedCiv} />
+          <GameScene grid={displayGrid} civs={displayCivs} selectedCiv={game.selectedCiv} turn={displayTurn} combatShake={effects.combatShake} />
 
           <div className="flex gap-2">
             {displayCivs.map((c, i) => (
