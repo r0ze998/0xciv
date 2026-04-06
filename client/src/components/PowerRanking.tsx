@@ -1,4 +1,5 @@
 import type { Civilization } from '../types/game'
+import { StarIcon, SkullIcon } from './Icons'
 
 interface Props {
   civs: Civilization[]
@@ -18,11 +19,11 @@ export function PowerRanking({ civs }: Props) {
 
   return (
     <div className="bg-gray-900/80 rounded-lg border border-gray-700 p-3">
-      <h3 className="text-gray-500 text-xs font-bold mb-2 tracking-wider">⚡ POWER RANKING</h3>
+      <h3 className="text-gray-500 text-xs font-bold mb-2 tracking-wider flex items-center gap-1"><StarIcon size={12} color="#fbbf24" /> POWER RANKING</h3>
       <div className="space-y-1.5">
         {ranked.map((c, i) => (
           <div key={c.id} className={`flex items-center gap-2 ${!c.isAlive ? 'opacity-30' : ''}`}>
-            <span className="text-[10px] text-gray-600 w-4">{c.isAlive ? `#${i + 1}` : '☠️'}</span>
+            <span className="text-[10px] text-gray-600 w-4">{c.isAlive ? `#${i + 1}` : <SkullIcon size={10} color="#666" />}</span>
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
             <span className="text-xs truncate flex-shrink-0 w-16" style={{ color: c.color }}>
               {c.name.split(' ')[0]}

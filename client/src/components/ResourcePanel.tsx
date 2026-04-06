@@ -3,6 +3,7 @@ import type { Civilization } from '../types/game'
 import { HPBar } from './HPBar'
 import { DangerIndicator } from './DangerIndicator'
 import { TechTree } from './TechTree'
+import { FoodIcon, MetalIcon, KnowledgeIcon, ShieldIcon } from './Icons'
 
 function usePrevious<T>(value: T): T | undefined {
   const ref = useRef<T>(undefined)
@@ -59,9 +60,11 @@ export function ResourcePanel({ civ }: { civ: Civilization }) {
         <HPBar hp={civ.hp} maxHp={civ.maxHp} color={civ.color} />
       </div>
       <div className="space-y-1 text-sm">
-        {([['FOOD', 'food', civ.food, prev?.food, true], ['METAL', 'metal', civ.metal, prev?.metal, false], ['KNOW', 'knowledge', civ.knowledge, prev?.knowledge, false]] as const).map(([icon, , val, prevVal, fatal]) => (
+        {([['FOOD', 'food', civ.food, prev?.food, true, FoodIcon], ['METAL', 'metal', civ.metal, prev?.metal, false, MetalIcon], ['KNOW', 'knowledge', civ.knowledge, prev?.knowledge, false, KnowledgeIcon]] as const).map(([icon, , val, prevVal, fatal, IconComp]) => (
           <div key={icon} className="flex items-center gap-2">
-            <span className="w-8 text-[8px] tracking-wider" style={{ color: 'var(--c-text-muted)', fontFamily: 'var(--font-display)' }}>{icon}</span>
+            <span className="w-8 flex items-center gap-0.5">
+              <IconComp size={12} color={fatal && (val as number) < 20 ? '#ff0040' : civ.color} />
+            </span>
             <div className="flex-1 rounded-full h-1.5" style={{ backgroundColor: 'var(--c-bg)' }}>
               <div className={`h-full rounded-full transition-all duration-500 ${fatal && (val as number) < 20 ? 'animate-danger-pulse' : ''}`} style={{
                 width: `${Math.min(100, (val as number) / 2)}%`,
@@ -77,7 +80,9 @@ export function ResourcePanel({ civ }: { civ: Civilization }) {
           </div>
         ))}
         <div className="flex items-center gap-2">
-          <span className="w-8 text-[8px] tracking-wider" style={{ color: 'var(--c-text-muted)', fontFamily: 'var(--font-display)' }}>TILES</span>
+          <span className="w-8 flex items-center">
+            <ShieldIcon size={12} color={civ.color} />
+          </span>
           <span className="text-xs" style={{ color: 'var(--c-text-dim)', fontFamily: 'var(--font-mono)' }}>
             {civ.territories}
             <Delta current={civ.territories} prev={prev?.territories} />

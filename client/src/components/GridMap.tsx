@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import type { Territory, Civilization } from '../types/game'
-import { RESOURCE_ICONS } from '../lib/constants'
+import { RESOURCE_ICON_MAP } from './Icons'
 
 interface Props {
   grid: Territory[][]
@@ -77,7 +77,10 @@ export function GridMap({ grid, civs, selectedCiv }: Props) {
               onMouseEnter={() => setHoveredCell(`${t.x}-${t.y}`)}
               onMouseLeave={() => setHoveredCell(null)}
             >
-              <span className="text-sm select-none">{RESOURCE_ICONS[t.resource]}</span>
+              {(() => {
+                const IconComp = RESOURCE_ICON_MAP[t.resource]
+                return IconComp ? <IconComp size={18} color={owner ? owner.color : '#555'} /> : null
+              })()}
               {owner && (
                 <span className="absolute bottom-0.5 right-1 w-1.5 h-1.5 rounded-full" style={{
                   backgroundColor: owner.color,

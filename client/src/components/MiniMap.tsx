@@ -13,7 +13,7 @@ export function MiniMap({ grid, civs }: Props) {
 
   return (
     <div className="bg-gray-900/80 rounded-lg border border-gray-700 p-2">
-      <h3 className="text-gray-500 text-[10px] font-bold mb-1.5 tracking-wider">🗺️ MAP</h3>
+      <h3 className="text-gray-500 text-[10px] font-bold mb-1.5 tracking-wider">MAP</h3>
       <svg width={size} height={size} className="mx-auto">
         {grid.flat().map(t => {
           const civ = t.owner !== null ? civs[t.owner] : null

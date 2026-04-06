@@ -1,4 +1,5 @@
 import type { Civilization } from '../types/game'
+import { ShieldIcon } from './Icons'
 
 interface Props {
   civs: Civilization[]
@@ -37,7 +38,7 @@ export function DiplomacyPanel({ civs }: Props) {
 
   return (
     <div className="bg-gray-900/80 rounded-lg border border-gray-700 p-3">
-      <h3 className="text-gray-500 text-xs font-bold mb-2 tracking-wider">🕊️ THREAT MATRIX</h3>
+      <h3 className="text-gray-500 text-xs font-bold mb-2 tracking-wider flex items-center gap-1"><ShieldIcon size={12} color="#666" /> THREAT MATRIX</h3>
       <div className="overflow-x-auto">
         <table className="w-full text-[10px]">
           <thead>

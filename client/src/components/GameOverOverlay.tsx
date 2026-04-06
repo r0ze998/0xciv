@@ -1,7 +1,8 @@
 import type { Civilization, GameStats } from '../types/game'
 import { ShareCard } from './ShareCard'
-import { VICTORY_ICONS, VICTORY_COLORS } from '../lib/victory'
+import { VICTORY_COLORS } from '../lib/victory'
 import type { VictoryType } from '../lib/victory'
+import { VICTORY_ICON_MAP } from './Icons'
 
 interface Props {
   winner: Civilization
@@ -25,7 +26,16 @@ export function GameOverOverlay({ winner, turn, stats, onReplay, victoryType }: 
           color: `${accentColor}cc`,
           fontFamily: 'var(--font-display)',
         }}>
-          {victoryType ? `${VICTORY_ICONS[victoryType] || ''} ${victoryType?.toUpperCase()} VICTORY` : 'GAME_OVER'}
+          {victoryType && VICTORY_ICON_MAP[victoryType] ? (
+            <span className="inline-flex items-center gap-1.5">
+              {(() => {
+                const vi = VICTORY_ICON_MAP[victoryType]
+                const VIcon = vi.component
+                return <VIcon size={14} color={vi.color} />
+              })()}
+              {victoryType.toUpperCase()} VICTORY
+            </span>
+          ) : 'GAME_OVER'}
         </p>
         <h2 className="text-3xl sm:text-5xl font-black mb-2 title-glow" style={{
           color: winner.color,
