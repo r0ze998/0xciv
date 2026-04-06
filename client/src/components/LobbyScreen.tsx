@@ -1,16 +1,47 @@
 import { useState } from 'react'
 import { COLORS } from '../lib/constants'
+import { connectWallet } from '../cartridge'
+import { executeCreateGame, executeSpawnCivilization } from '../actions'
 
 interface Props {
   dataSource: 'loading' | 'torii' | 'mock'
   onStart: (names?: string[]) => void
   onSpectate: () => void
   onTutorial?: () => void
+  walletAddress?: string | null
+  onWalletConnect?: (addr: string) => void
 }
 
-export function LobbyScreen({ dataSource, onStart, onSpectate, onTutorial }: Props) {
+export function LobbyScreen({ dataSource, onStart, onSpectate, onTutorial, walletAddress, onWalletConnect }: Props) {
   const [names, setNames] = useState(COLORS.map(c => c.name))
   const [editing, setEditing] = useState<number | null>(null)
+  const [chainLoading, setChainLoading] = useState<string | null>(null)
+
+  async function handleConnect() {
+    try {
+      setChainLoading('connect')
+      const acct = await connectWallet()
+      if (acct?.account) onWalletConnect?.(acct.account as string)
+    } catch { /* user cancelled */ }
+    finally { setChainLoading(null) }
+  }
+
+  async function handleCreateOnChain() {
+    setChainLoading('create')
+    try {
+      await executeCreateGame()
+      await executeSpawnCivilization()
+    } catch { /* failed */ }
+    finally { setChainLoading(null) }
+  }
+
+  async function handleJoinOnChain() {
+    setChainLoading('join')
+    try {
+      await executeSpawnCivilization()
+    } catch { /* failed */ }
+    finally { setChainLoading(null) }
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8 scanline crt-lines"
@@ -152,9 +183,56 @@ export function LobbyScreen({ dataSource, onStart, onSpectate, onTutorial }: Pro
         </button>
       </div>
 
+      {/* On-chain multiplayer */}
+      <div className="mt-6 max-w-md rounded border p-4 animate-fade-up-delay-3 corner-deco"
+        style={{ backgroundColor: 'var(--c-surface)', borderColor: `var(--c-secondary)33` }}>
+        <h3 className="text-[9px] font-bold mb-3 tracking-[0.2em] neon-cyan"
+          style={{ fontFamily: 'var(--font-display)' }}>
+          ON-CHAIN_MULTIPLAYER
+        </h3>
+        {!walletAddress ? (
+          <button
+            onClick={handleConnect}
+            disabled={!!chainLoading}
+            className="w-full py-2 text-[10px] font-bold border transition-all hover:scale-105 hex-clip tracking-wider"
+            style={{
+              borderColor: 'var(--c-secondary)',
+              color: 'var(--c-secondary)',
+              fontFamily: 'var(--font-display)',
+            }}
+          >
+            {chainLoading === 'connect' ? 'CONNECTING...' : 'CONNECT_WALLET'}
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-[9px] neon-green" style={{ fontFamily: 'var(--font-mono)' }}>
+              {walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleCreateOnChain}
+                disabled={!!chainLoading}
+                className="flex-1 py-1.5 text-[9px] font-bold border disabled:opacity-30 transition-all hover:scale-105 hex-clip tracking-wider"
+                style={{ borderColor: 'var(--c-primary)', color: 'var(--c-primary)', fontFamily: 'var(--font-display)' }}
+              >
+                {chainLoading === 'create' ? '...' : 'CREATE + JOIN'}
+              </button>
+              <button
+                onClick={handleJoinOnChain}
+                disabled={!!chainLoading}
+                className="flex-1 py-1.5 text-[9px] font-bold border disabled:opacity-30 transition-all hover:scale-105 hex-clip tracking-wider"
+                style={{ borderColor: 'var(--c-secondary)', color: 'var(--c-secondary)', fontFamily: 'var(--font-display)' }}
+              >
+                {chainLoading === 'join' ? '...' : 'JOIN_GAME'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <p className="text-[9px] mt-4 animate-fade-up-delay-3 tracking-widest"
         style={{ color: 'var(--c-text-muted)', fontFamily: 'var(--font-display)' }}>
-        DOJO_GAME_JAM_VIII
+        STARKNET // DOJO // CAIRO
       </p>
     </div>
   )

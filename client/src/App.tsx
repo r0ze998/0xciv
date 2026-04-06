@@ -102,11 +102,27 @@ export default function App() {
     }
   }
 
-  function savePrompt() {
+  async function savePrompt() {
     const updated = [...game.civs]
     updated[game.selectedCiv] = { ...updated[game.selectedCiv], prompt: game.prompt }
     game.setCivs(updated)
     game.setLogs(prev => [...prev, { turn: game.turn, message: `${playerCiv.name} updated their strategy prompt`, type: 'system' }])
+
+    // If wallet connected, also save strategy hash on-chain
+    if (game.walletAddress && game.dataSource === 'torii') {
+      try {
+        const { executeSetStrategy } = await import('./actions')
+        // Simple hash: use the prompt text as a felt252-compatible hash
+        const encoder = new TextEncoder()
+        const data = encoder.encode(game.prompt)
+        let hash = 0n
+        for (const byte of data) hash = (hash * 256n + BigInt(byte)) % (2n ** 251n)
+        await executeSetStrategy('0x' + hash.toString(16))
+        game.setLogs(prev => [...prev, { turn: game.turn, message: 'Strategy hash saved on-chain', type: 'system' }])
+      } catch {
+        // Silently fail — on-chain save is best-effort
+      }
+    }
   }
 
   // --- Render ---
@@ -122,7 +138,8 @@ export default function App() {
   if (game.phase === 'lobby') {
     return (
       <div>
-        <LobbyScreen dataSource={game.dataSource} onStart={startGame} onSpectate={startSpectate} onTutorial={() => setShowTutorial(true)} />
+        <LobbyScreen dataSource={game.dataSource} onStart={startGame} onSpectate={startSpectate} onTutorial={() => setShowTutorial(true)}
+          walletAddress={game.walletAddress} onWalletConnect={(addr) => game.setWalletAddress(addr)} />
         {showTutorial && <Tutorial onComplete={() => setShowTutorial(false)} />}
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10">
           <GameSettings onApply={(s) => {
